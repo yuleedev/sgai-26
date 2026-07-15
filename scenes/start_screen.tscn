@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3 uid="uid://ddq645kn1bcsq"]
+
+[ext_resource type="Script" uid="uid://8ex4vv4gcnbt" path="res://scripts/ui/start_screen.gd" id="1_tx5wa"]
+
+[node name="StartScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_tx5wa")
+
+[node name="StartComic" type="Button" parent="."]
+layout_mode = 0
+offset_left = 760.0
+offset_top = 390.0
+offset_right = 1272.0
+offset_bottom = 630.0
+text = "start"
+
+[connection signal="pressed" from="StartComic" to="." method="_on_start_comic_pressed"]

@@ -1,0 +1,6 @@
+res://scenes/start_screen.tscn
+res://scripts/core/game_manager.gd
+res://scripts/ui/start_screen.gd
+res://scenes/comic_scene.tscn
+res://scripts/ui/comic_scene.gd
+res://scenes/map_scene.tscn

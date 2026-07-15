@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3 uid="uid://b55yw5tda4gk8"]
+
+[ext_resource type="Texture2D" uid="uid://6d8dy7q81fy7" path="res://assets/full comic.PNG" id="1_4h1eo"]
+[ext_resource type="Script" uid="uid://dtw1wsktad814" path="res://scripts/ui/comic_scene.gd" id="1_4oiw7"]
+
+[node name="ComicScene" type="Node2D"]
+script = ExtResource("1_4oiw7")
+
+[node name="Comic" type="Sprite2D" parent="."]
+position = Vector2(960, 540)
+texture = ExtResource("1_4h1eo")
+
+[node name="StartGame" type="Button" parent="."]
+offset_left = 1620.0
+offset_top = 652.0
+offset_right = 1890.0
+offset_bottom = 762.0
+text = "start"
+
+[connection signal="pressed" from="StartGame" to="." method="_on_start_game_pressed"]

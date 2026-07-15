@@ -1,0 +1,15 @@
+ea4bc82a6ad023ab7ee23ee620429895
+::res://::1784148415
+icon.svg::CompressedTexture2D/CompressedTexture2D::6744270828621315898::1784146793::1784147329::1::::<><><>0<>0<>c309a2fad31bb18d4f601bd4b17bf3cf<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
+::res://assets/::1784147792
+full comic.PNG::CompressedTexture2D/CompressedTexture2D::2184057614950430404::1784136110::1784147792::1::::<><><>0<>0<>86a211ac976e069c87a81b269c5d806c<>res://.godot/imported/full comic.PNG-f416131a2f39913611af04bd4d57d516.ctex::
+::res://scenes/::1784148415
+comic_scene.tscn::PackedScene::4555515425937410325::1784148375::0::1::::<><><>0<>0<><>::uid://6d8dy7q81fy7::::res://assets/full comic.PNG<>uid://dtw1wsktad814::::res://scripts/ui/comic_scene.gd
+map_scen e.tscn::PackedScene::4347138025925170461::1784148407::0::1::::<><><>0<>0<><>::
+start_screen.tscn::PackedScene::7404794232631355076::1784148384::0::1::::<><><>0<>0<><>::uid://8ex4vv4gcnbt::::res://scripts/ui/start_screen.gd
+::res://scripts/::1784147416
+::res://scripts/core/::1784147616
+game_manager.gd::GDScript/GDScript::3373749339187024187::1784147616::0::1::::<>Node<><>0<>0<><>::
+::res://scripts/ui/::1784148407
+comic_scene.gd::GDScript::8539885281800846093::1784148407::0::1::::<>Node<><>0<>0<><>::
+start_screen.gd::GDScript::2325938766685163193::1784148383::0::1::::<>Control<><>0<>0<><>::
