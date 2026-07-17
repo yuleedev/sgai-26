@@ -15,11 +15,19 @@ const COLOR_TILES: Array[Vector2i] =[
 	Vector2i(3,0), # high zombies
 	Vector2i(4,0), # player
 ]
+const ENV_TILE_SIZE := 200
+# Hub defaults to map center until player chooses one at startup.
+const DEFAULT_HUB_CELL := Vector2i(2, 2)
+const AmbulanceScript = preload("res://scripts/units/ambulance.gd")
+
 # set variables for assets
 @onready var grid: TileMapLayer = $Grid
+@onready var ambulance: AmbulanceScript = $Ambulance
 var zombie_cell := Vector2i.ZERO
 # store zombie count per cell
 var zombie_counts: Dictionary[Vector2i, int] = {}
+## Player-chosen hub (startup selection not implemented yet).
+var hub_cell: Vector2i = DEFAULT_HUB_CELL
 
 func _ready() -> void:
 	initialize_grid()
@@ -27,6 +35,7 @@ func _ready() -> void:
 	zombie_counts[zombie_cell] = STARTING_ZOMBIES
 	update_all_cells()
 	set_player_cell()
+	setup_ambulance()
 
 func initialize_grid() -> void:
 	zombie_counts.clear()
@@ -40,9 +49,17 @@ func initialize_grid() -> void:
 	center_grid()
 
 func center_grid() -> void:
-	var grid_size_pixels := Vector2(GRID_SIZE * 200, GRID_SIZE * 200)
+	var grid_size_pixels := Vector2(GRID_SIZE * ENV_TILE_SIZE, GRID_SIZE * ENV_TILE_SIZE)
 	var window_size := get_viewport_rect().size
 	grid.position = (window_size - grid_size_pixels) / 2.0
+
+func cell_to_world_center(cell: Vector2i) -> Vector2:
+	return grid.position + (Vector2(cell) + Vector2(0.5, 0.5)) * ENV_TILE_SIZE
+
+func setup_ambulance() -> void:
+	# Hub will come from startup selection later; use default for now.
+	hub_cell = DEFAULT_HUB_CELL
+	ambulance.setup(hub_cell, cell_to_world_center(hub_cell))
 
 func random_outer_cell() -> Vector2i:
 	# make array of outer cells
@@ -80,5 +97,4 @@ func update_individual_cell(cell: Vector2i) -> void:
 	grid.set_cell(cell, TILE_SOURCE_ID, COLOR_TILES[zombie_level])
 
 func set_player_cell() -> void:
-	var center_cell := Vector2i(2,2)
-	grid.set_cell(center_cell, TILE_SOURCE_ID, COLOR_TILES[4])
+	grid.set_cell(hub_cell, TILE_SOURCE_ID, COLOR_TILES[4])

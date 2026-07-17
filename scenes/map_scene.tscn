@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://b261y00xldabt"]
+[gd_scene load_steps=6 format=3 uid="uid://b261y00xldabt"]
 
 [ext_resource type="Script" uid="uid://bocjfnp03aftb" path="res://scripts/core/game_manager.gd" id="1_0wcw4"]
 [ext_resource type="Texture2D" uid="uid://b32pgnf8lb6yk" path="res://assets/tiles.png" id="2_ne7uw"]
+[ext_resource type="PackedScene" uid="uid://cambulanceunit01" path="res://scenes/units/ambulance.tscn" id="3_ambulance"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5m4q6"]
 texture = ExtResource("2_ne7uw")
@@ -21,3 +22,5 @@ script = ExtResource("1_0wcw4")
 
 [node name="Grid" type="TileMapLayer" parent="."]
 tile_set = SubResource("TileSet_vlip3")
+
+[node name="Ambulance" parent="." instance=ExtResource("3_ambulance")]

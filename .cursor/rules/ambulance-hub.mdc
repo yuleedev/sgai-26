@@ -1,0 +1,30 @@
+---
+description: Ambulance unit, hub spawn, and deferred skill-tree / player-control plans
+alwaysApply: true
+---
+
+# Ambulance & hub context
+
+## Current setup
+- Scene: `scenes/units/ambulance.tscn`
+- Script: `scripts/units/ambulance.gd`
+- Simple circle Node2D; instanced under `MapScene` as `Ambulance`
+- Travels with tweens via `move_to(world_pos)` and `return_to_hub()`
+- Signals: `arrived_at_target`, `returned_to_hub`
+
+## Hub
+- Player will choose the hub cell at run startup (not implemented yet)
+- Until then, hub defaults to grid center `(2, 2)`
+- `GameManager.hub_cell` + `Ambulance.setup(hub_cell, hub_world_pos)` wire the home position
+- Ambulance always returns to that hub after a dispatch
+
+## Intentionally not built yet
+- Player picking hub on startup
+- Player manually controlling / dispatching the ambulance
+- Skill tree (will define automated behavior; mostly auto, optional manual)
+- Cure/kill resolution tied to arrival
+
+## When extending
+- Keep movement API on `Ambulance` (`move_to`, `return_to_hub`, hub fields)
+- Put skill-tree modifiers and dispatch policy outside the node (systems / game manager)
+- Do not bury player-input handling inside `ambulance.gd` until that feature is requested
