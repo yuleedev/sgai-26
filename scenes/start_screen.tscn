@@ -1,18 +1,131 @@
-[gd_scene load_steps=2 format=3 uid="uid://ddq645kn1bcsq"]
+[gd_scene load_steps=9 format=3 uid="uid://ddq645kn1bcsq"]
 
 [ext_resource type="Script" uid="uid://8ex4vv4gcnbt" path="res://scripts/ui/start_screen.gd" id="1_tx5wa"]
+[ext_resource type="Script" uid="uid://xdapoh3oheyp" path="res://scripts/ui/hover_button.gd" id="2_hover"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
+content_margin_left = 28.0
+content_margin_top = 16.0
+content_margin_right = 28.0
+content_margin_bottom = 16.0
+bg_color = Color(0.109804, 0.117647, 0.145098, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.0784314)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+content_margin_left = 28.0
+content_margin_top = 16.0
+content_margin_right = 28.0
+content_margin_bottom = 16.0
+bg_color = Color(0.423529, 0.54902, 1, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
+content_margin_left = 28.0
+content_margin_top = 16.0
+content_margin_right = 28.0
+content_margin_bottom = 16.0
+bg_color = Color(0.313726, 0.435294, 0.870588, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_btn_focus"]
+
+[sub_resource type="Theme" id="Theme_menu"]
+Button/colors/font_color = Color(0.898039, 0.905882, 0.929412, 1)
+Button/colors/font_hover_color = Color(1, 1, 1, 1)
+Button/colors/font_pressed_color = Color(1, 1, 1, 1)
+Button/font_sizes/font_size = 34
+Button/styles/focus = SubResource("StyleBoxEmpty_btn_focus")
+Button/styles/hover = SubResource("StyleBoxFlat_btn_hover")
+Button/styles/normal = SubResource("StyleBoxFlat_btn_normal")
+Button/styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
 
 [node name="StartScreen" type="Control"]
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_menu")
 script = ExtResource("1_tx5wa")
 
-[node name="StartComic" type="Button" parent="."]
-layout_mode = 0
-offset_left = 760.0
-offset_top = 390.0
-offset_right = 1272.0
-offset_bottom = 630.0
-text = "start"
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.054902, 0.0588235, 0.0745098, 1)
 
-[connection signal="pressed" from="StartComic" to="." method="_on_start_comic_pressed"]
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 48
+alignment = 1
+
+[node name="TitleBlock" type="VBoxContainer" parent="Center/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Center/Layout/TitleBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.972549, 0.976471, 0.988235, 1)
+theme_override_font_sizes/font_size = 104
+text = "GAME TITLE"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center/Layout/TitleBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.423529, 0.54902, 1, 1)
+theme_override_font_sizes/font_size = 26
+text = "placeholder tagline"
+horizontal_alignment = 1
+
+[node name="Buttons" type="VBoxContainer" parent="Center/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="PlayButton" type="Button" parent="Center/Layout/Buttons"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = "Play"
+script = ExtResource("2_hover")
+
+[node name="CreditsButton" type="Button" parent="Center/Layout/Buttons"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = "Credits"
+script = ExtResource("2_hover")
+
+[node name="SettingsButton" type="Button" parent="Center/Layout/Buttons"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = "Settings"
+script = ExtResource("2_hover")
+
+[connection signal="pressed" from="Center/Layout/Buttons/PlayButton" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="Center/Layout/Buttons/CreditsButton" to="." method="_on_credits_pressed"]
+[connection signal="pressed" from="Center/Layout/Buttons/SettingsButton" to="." method="_on_settings_pressed"]
