@@ -1,21 +1,26 @@
-.DS_Store
-# Godot 4.2+ specific ignores
-~*.dll
-
 # Godot 4+ specific ignores
 .godot/
-.nomedia
 
-# Godot-specific ignores
+# Godot 3 specific ignores
 .import/
-export.cfg
-export_credentials.cfg
-*.tmp
 
-# Imported translations (automatically generated from CSV files)
+# Engine-generated or export artifacts
+*.tmp
 *.translation
 
-# Mono-specific ignores
+# Export configuration files
+# Keep export_presets.cfg in Git unless it contains sensitive info (e.g., Android Keystore passwords)
+# export_presets.cfg
+
+# Mono/C# specific ignores
 .mono/
 data_*/
-mono_crash.*.json
+mono_crash.*
+[Dd]ebug/
+[Rr]elease/
+bld/
+bin/
+obj/
+
+# Dedicated export folder (Optional: uncomment if you export builds inside your project folder)
+# exports/
