@@ -1,1 +1,4 @@
 .DS_Store
+
+# Godot's private per-machine cache — regenerated automatically, never commit
+.godot/
