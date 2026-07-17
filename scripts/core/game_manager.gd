@@ -15,8 +15,24 @@ const COLOR_TILES: Array[Vector2i] =[
 	Vector2i(3,0), # high zombies
 	Vector2i(4,0), # player
 ]
+
+# skill tree
+const SKILL_COSTS := {
+	"hazard_resistance": 100,
+	"zombie_killing": 150,
+	"cure_efficacy": 200,
+	"cargo_capacity": 300,
+}
+const SKILL_PREREQS := {
+	"hazard_resistance": [],
+	"zombie_killing": ["hazard_resistance"],
+	"cure_efficacy": ["hazard_resistance"],
+	"cargo_capacity": ["cure_efficacy"],
+}
 # set variables for assets
 @onready var grid: TileMapLayer = $Grid
+var money := 0
+var skills: Dictionary = {}
 var zombie_cell := Vector2i.ZERO
 # store zombie count per cell
 var zombie_counts: Dictionary[Vector2i, int] = {}
@@ -82,3 +98,30 @@ func update_individual_cell(cell: Vector2i) -> void:
 func set_player_cell() -> void:
 	var center_cell := Vector2i(2,2)
 	grid.set_cell(center_cell, TILE_SOURCE_ID, COLOR_TILES[4])
+
+func earn_money(amount: int) -> void:
+	money += amount
+
+func has_skill(skill: String) -> bool:
+	return skills.get(skill, false)
+
+func can_buy_skill(skill: String) -> bool:
+	if has_skill(skill):
+		return false
+	if money < SKILL_COSTS[skill]:
+		return false
+	for prereq in SKILL_PREREQS[skill]:
+		if not has_skill(prereq):
+			return false
+	return true
+
+func buy_skill(skill: String) -> bool:
+	if not can_buy_skill(skill):
+		return false
+	money -= SKILL_COSTS[skill]
+	skills[skill] = true
+	return true
+
+func _on_skills_pressed() -> void:
+	var tree := preload("res://scenes/skill_tree.tscn").instantiate()
+	add_child(tree)
