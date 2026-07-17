@@ -3,7 +3,6 @@ extends CanvasLayer
 @onready var money_label: Label = %MoneyLabel
 @onready var close_button: Button = %CloseButton
 @onready var earn_button: Button = %EarnButton
-@onready var stats_container: VBoxContainer = %StatsContainer
 @onready var visual_tree: Control = %VisualTree
 @onready var detail_panel: VBoxContainer = %DetailPanel
 @onready var detail_hint: Label = %DetailHint
@@ -14,33 +13,6 @@ extends CanvasLayer
 @onready var detail_cost: Label = %DetailCost
 @onready var detail_buy_button: Button = %DetailBuyButton
 @onready var detail_purchased: Label = %DetailPurchased
-
-const STATS := [
-	{
-		name = "Kill Power",
-		base = "Basic",
-		upgraded = "Deadly",
-		skill_key = "zombie_killing",
-	},
-	{
-		name = "Cure Potency",
-		base = "1.0x",
-		upgraded = "2.0x",
-		skill_key = "cure_efficacy",
-	},
-	{
-		name = "Defense",
-		base = "None",
-		upgraded = "Reinforced",
-		skill_key = "hazard_resistance",
-	},
-	{
-		name = "Cargo",
-		base = "1 load",
-		upgraded = "2 loads",
-		skill_key = "cargo_capacity",
-	},
-]
 
 const SKILLS := [
 	{
@@ -88,10 +60,8 @@ const NODE_RADIUS := NODE_SIZE / 2
 
 var upgrade_buttons: Dictionary = {}
 var selected_key: String = ""
-var stat_labels: Dictionary = {}
 
 func _ready() -> void:
-	populate_stats()
 	build_visual_tree()
 	visual_tree.draw.connect(_on_visual_tree_draw)
 	close_button.pressed.connect(_on_close_pressed)
@@ -244,40 +214,11 @@ func update_node_colors() -> void:
 
 	visual_tree.queue_redraw()
 
-func populate_stats() -> void:
-	for stat in STATS:
-		var hbox := HBoxContainer.new()
-
-		var name_label := Label.new()
-		name_label.text = stat.name + ": "
-		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hbox.add_child(name_label)
-
-		var value_label := Label.new()
-		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		value_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hbox.add_child(value_label)
-
-		stat_labels[stat.skill_key] = value_label
-		stats_container.add_child(hbox)
-
-	update_stats()
-
-func update_stats() -> void:
-	var gm = get_parent()
-	for stat in STATS:
-		var label: Label = stat_labels[stat.skill_key]
-		if gm.has_skill(stat.skill_key):
-			label.text = stat.upgraded
-		else:
-			label.text = stat.base
-
 func update_ui() -> void:
 	var gm = get_parent()
 	money_label.text = "Money: " + str(gm.money) + "g"
 
 	update_node_colors()
-	update_stats()
 
 	if selected_key != "":
 		show_details(selected_key)

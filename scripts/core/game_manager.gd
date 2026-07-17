@@ -120,6 +120,7 @@ func buy_skill(skill: String) -> bool:
 		return false
 	money -= SKILL_COSTS[skill]
 	skills[skill] = true
+	print("Purchased upgrade: ", skill, " | Money remaining: ", money)
 	return true
 
 func _on_skills_pressed() -> void:

@@ -44,6 +44,10 @@ unique_name_in_owner = true
 text = "Money: 0g"
 horizontal_alignment = 2
 
+[node name="EarnButton" type="Button" parent="Panel/MainVBox/Header"]
+unique_name_in_owner = true
+text = "+50g"
+
 [node name="ContentHBox" type="HBoxContainer" parent="Panel/MainVBox"]
 size_flags_vertical = 3
 
@@ -98,25 +102,8 @@ unique_name_in_owner = true
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="Separator" type="VSeparator" parent="Panel/MainVBox/ContentHBox"]
-
-[node name="StatsPanel" type="VBoxContainer" parent="Panel/MainVBox/ContentHBox"]
-size_flags_horizontal = 1
-custom_minimum_size = Vector2(180, 0)
-
-[node name="StatsTitle" type="Label" parent="Panel/MainVBox/ContentHBox/StatsPanel"]
-text = "Ambulance Stats"
-
-[node name="StatsContainer" type="VBoxContainer" parent="Panel/MainVBox/ContentHBox/StatsPanel"]
-unique_name_in_owner = true
-size_flags_vertical = 3
-
 [node name="Footer" type="HBoxContainer" parent="Panel/MainVBox"]
 custom_minimum_size = Vector2(0, 36)
-
-[node name="EarnButton" type="Button" parent="Panel/MainVBox/Footer"]
-unique_name_in_owner = true
-text = "+50g"
 
 [node name="FooterSpacer" type="Control" parent="Panel/MainVBox/Footer"]
 size_flags_horizontal = 3
