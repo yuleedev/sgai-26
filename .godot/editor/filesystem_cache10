@@ -1,16 +1,18 @@
-ea4bc82a6ad023ab7ee23ee620429895
-::res://::1784181159
-icon.svg::CompressedTexture2D/CompressedTexture2D::6744270828621315898::1784146793::1784147329::1::::<><><>0<>0<>c309a2fad31bb18d4f601bd4b17bf3cf<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
-::res://assets/::1784177967
-full comic.PNG::CompressedTexture2D/CompressedTexture2D::2184057614950430404::1784136110::1784147792::1::::<><><>0<>0<>86a211ac976e069c87a81b269c5d806c<>res://.godot/imported/full comic.PNG-f416131a2f39913611af04bd4d57d516.ctex::
-tiles.png::CompressedTexture2D/CompressedTexture2D::4408368666614266702::1784177966::1784177967::1::::<><><>0<>0<>2e2061bf0fddd085560bc18cf3d37a15<>res://.godot/imported/tiles.png-0d11a4bcdfb48056f67a66da241684a1.ctex::
-::res://scenes/::1784181147
-comic_scene.tscn::PackedScene::4555515425937410325::1784181144::0::1::::<><><>0<>0<><>::uid://6d8dy7q81fy7::::res://assets/full comic.PNG<>uid://dtw1wsktad814::::res://scripts/ui/comic_scene.gd
-map_scene.tscn::PackedScene::4347138025925170461::1784181147::0::1::::<><><>0<>0<><>::uid://bocjfnp03aftb::::res://scripts/core/game_manager.gd<>uid://b32pgnf8lb6yk::::res://assets/tiles.png
-start_screen.tscn::PackedScene::7404794232631355076::1784181144::0::1::::<><><>0<>0<><>::uid://8ex4vv4gcnbt::::res://scripts/ui/start_screen.gd
-::res://scripts/::1784147416
-::res://scripts/core/::1784181133
-game_manager.gd::GDScript::3373749339187024187::1784181133::0::1::::<>Node2D<><>0<>0<><>::
-::res://scripts/ui/::1784148479
-comic_scene.gd::GDScript/GDScript::8539885281800846093::1784148479::0::1::::<>Node<><>0<>0<><>::
-start_screen.gd::GDScript/GDScript::2325938766685163193::1784148383::0::1::::<>Control<><>0<>0<><>::
+63f7b34db8d8cdea90c76aacccf841ec
+::res://::1784302787
+icon.svg::CompressedTexture2D/CompressedTexture2D::6744270828621315898::1784238616::1784301878::1::::<><><>0<>0<>2d3529629c50d240176d4cec33c5cdcd<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
+::res://assets/::1784302750
+full comic.PNG::CompressedTexture2D/CompressedTexture2D::2184057614950430404::1784238616::1784238616::1::::<><><>0<>0<>86a211ac976e069c87a81b269c5d806c<>res://.godot/imported/full comic.PNG-f416131a2f39913611af04bd4d57d516.ctex::
+shade_tiles.png::CompressedTexture2D::8733418062924900056::1784302652::1784302750::1::::<><><>0<>0<>a34822694767034050b4beeb2aa43627<>res://.godot/imported/shade_tiles.png-3fc52e3032a43806a17646918cd1684d.ctex::
+shade_tileset.tres::TileSet::-1::1784302674::0::1::::<><><>0<>0<><>::
+tiles.png::CompressedTexture2D/CompressedTexture2D::4408368666614266702::1784238779::1784301773::1::::<><><>0<>0<>2e2061bf0fddd085560bc18cf3d37a15<>res://.godot/imported/tiles.png-0d11a4bcdfb48056f67a66da241684a1.ctex::
+::res://scenes/::1784301773
+comic_scene.tscn::PackedScene::4555515425937410325::1784238616::0::1::::<><><>0<>0<><>::uid://6d8dy7q81fy7::::res://assets/full comic.PNG<>uid://dtw1wsktad814::::res://scripts/ui/comic_scene.gd
+map_scene.tscn::PackedScene::4347138025925170461::1784302661::0::1::::<><><>0<>0<><>::uid://bocjfnp03aftb::::res://scripts/core/game_manager.gd<>uid://b32pgnf8lb6yk::::res://assets/tiles.png
+start_screen.tscn::PackedScene::7404794232631355076::1784238616::0::1::::<><><>0<>0<><>::uid://8ex4vv4gcnbt::::res://scripts/ui/start_screen.gd
+::res://scripts/::1784238664
+::res://scripts/core/::1784238779
+game_manager.gd::GDScript::3373749339187024187::1784302671::0::1::::<>Node2D<><>0<>0<><>::
+::res://scripts/ui/::1784238625
+comic_scene.gd::GDScript::8539885281800846093::1784238616::0::1::::<>Node<><>0<>0<><>::
+start_screen.gd::GDScript::2325938766685163193::1784238616::0::1::::<>Control<><>0<>0<><>::
