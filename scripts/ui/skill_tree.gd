@@ -16,43 +16,64 @@ extends CanvasLayer
 
 const SKILLS := [
 	{
-		key = "hazard_resistance",
-		name = "Hazard Resistance",
-		desc = "Reduce damage from hazards",
-		cost = 100,
-		letter = "H",
-		pos = Vector2(240, 80),
+		key = "better_cure_1",
+		name = "Better Cure",
+		desc = "Cure 20% → 35%",
+		cost = 100000,
+		letter = "C1",
+		pos = Vector2(100, 140),
+		prereqs = [],
 	},
 	{
-		key = "zombie_killing",
-		name = "Zombie Killing",
-		desc = "Take down zombies faster",
-		cost = 150,
-		letter = "Z",
-		pos = Vector2(140, 210),
+		key = "better_cure_2",
+		name = "Better Cure II",
+		desc = "Cure 35% → 50%",
+		cost = 200000,
+		letter = "C2",
+		pos = Vector2(100, 340),
+		prereqs = ["better_cure_1"],
 	},
 	{
-		key = "cure_efficacy",
-		name = "Cure Efficacy",
-		desc = "Each cure heals more infected",
-		cost = 200,
-		letter = "C",
-		pos = Vector2(340, 210),
+		key = "extra_doses_1",
+		name = "Extra Doses",
+		desc = "+5 doses",
+		cost = 80000,
+		letter = "D1",
+		pos = Vector2(260, 140),
+		prereqs = [],
 	},
 	{
-		key = "cargo_capacity",
-		name = "Cargo Capacity",
-		desc = "Carry more cure supplies per trip",
-		cost = 300,
-		letter = "G",
-		pos = Vector2(240, 340),
+		key = "extra_doses_2",
+		name = "Extra Doses II",
+		desc = "+5 more",
+		cost = 120000,
+		letter = "D2",
+		pos = Vector2(260, 340),
+		prereqs = ["extra_doses_1"],
+	},
+	{
+		key = "rush_vaccine",
+		name = "Rush Vaccine",
+		desc = "Vaccine 3 days earlier",
+		cost = 150000,
+		letter = "V",
+		pos = Vector2(420, 140),
+		prereqs = [],
+	},
+	{
+		key = "quarantine",
+		name = "Quarantine",
+		desc = "All spread chances halved",
+		cost = 120000,
+		letter = "Q",
+		pos = Vector2(580, 140),
+		prereqs = [],
 	},
 ]
 
 const CONNECTIONS := [
-	["hazard_resistance", "zombie_killing"],
-	["hazard_resistance", "cure_efficacy"],
-	["cure_efficacy", "cargo_capacity"],
+	["better_cure_1", "better_cure_2"],
+	["extra_doses_1", "extra_doses_2"],
 ]
 
 const NODE_SIZE := 56
@@ -104,15 +125,11 @@ func show_details(key: String) -> void:
 		detail_buy_button.visible = false
 		detail_purchased.visible = true
 	else:
-		detail_cost.text = "Cost: " + str(skill.cost) + "g"
+		detail_cost.text = "Cost: " + _format_money(skill.cost)
 		detail_buy_button.visible = true
 		detail_purchased.visible = false
-		if gm.can_buy_skill(key):
-			detail_buy_button.disabled = false
-			detail_buy_button.text = "Buy"
-		else:
-			detail_buy_button.disabled = true
-			detail_buy_button.text = "Locked"
+		detail_buy_button.text = "Buy"
+		detail_buy_button.disabled = not _can_buy(key)
 
 	visual_tree.queue_redraw()
 
@@ -122,11 +139,39 @@ func _get_skill(key: String):
 			return s
 	return null
 
+func _prereqs_met(key: String) -> bool:
+	var skill = _get_skill(key)
+	if skill == null:
+		return false
+	var gm = get_parent()
+	for p in skill.prereqs:
+		if not gm.has_skill(p):
+			return false
+	return true
+
+func _can_buy(key: String) -> bool:
+	var gm = get_parent()
+	var skill = _get_skill(key)
+	if skill == null:
+		return false
+	if gm.has_skill(key):
+		return false
+	if not _prereqs_met(key):
+		return false
+	if gm.money < skill.cost:
+		return false
+	return true
+
+func _format_money(amount: int) -> String:
+	if amount == 0:
+		return "$0"
+	return "$" + str(amount / 1000) + "K"
+
 func _get_node_color(key: String) -> Color:
 	var gm = get_parent()
 	if gm.has_skill(key):
 		return Color(0.2, 0.7, 0.2)
-	elif gm.can_buy_skill(key):
+	elif _can_buy(key) or _prereqs_met(key):
 		return Color(0.35, 0.35, 0.4)
 	else:
 		return Color(0.15, 0.15, 0.18)
@@ -203,7 +248,7 @@ func update_node_colors() -> void:
 		sb.content_margin_top = 0
 		sb.content_margin_bottom = 0
 
-		if gm.has_skill(skill.key):
+		if gm.has_skill(skill.key) or _can_buy(skill.key):
 			sb.border_width_left = 2
 			sb.border_width_right = 2
 			sb.border_width_top = 2
@@ -216,7 +261,7 @@ func update_node_colors() -> void:
 
 func update_ui() -> void:
 	var gm = get_parent()
-	money_label.text = "Money: " + str(gm.money) + "g"
+	money_label.text = "Money: " + _format_money(gm.money)
 
 	update_node_colors()
 
@@ -227,12 +272,13 @@ func _on_detail_buy_pressed() -> void:
 	if selected_key == "":
 		return
 	var gm = get_parent()
-	if gm.buy_skill(selected_key):
+	var skill = _get_skill(selected_key)
+	if skill != null and gm.buy_skill(selected_key, skill.cost):
 		update_ui()
 
 func _on_earn_pressed() -> void:
 	var gm = get_parent()
-	gm.earn_money(50)
+	gm.earn_money(10000)
 	update_ui()
 
 func _on_close_pressed() -> void:

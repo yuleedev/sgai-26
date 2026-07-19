@@ -16,19 +16,6 @@ const COLOR_TILES: Array[Vector2i] =[
 	Vector2i(4,0), # player
 ]
 
-# skill tree
-const SKILL_COSTS := {
-	"hazard_resistance": 100,
-	"zombie_killing": 150,
-	"cure_efficacy": 200,
-	"cargo_capacity": 300,
-}
-const SKILL_PREREQS := {
-	"hazard_resistance": [],
-	"zombie_killing": ["hazard_resistance"],
-	"cure_efficacy": ["hazard_resistance"],
-	"cargo_capacity": ["cure_efficacy"],
-}
 # set variables for assets
 @onready var grid: TileMapLayer = $Grid
 var money := 0
@@ -105,20 +92,12 @@ func earn_money(amount: int) -> void:
 func has_skill(skill: String) -> bool:
 	return skills.get(skill, false)
 
-func can_buy_skill(skill: String) -> bool:
+func buy_skill(skill: String, cost: int) -> bool:
 	if has_skill(skill):
 		return false
-	if money < SKILL_COSTS[skill]:
+	if money < cost:
 		return false
-	for prereq in SKILL_PREREQS[skill]:
-		if not has_skill(prereq):
-			return false
-	return true
-
-func buy_skill(skill: String) -> bool:
-	if not can_buy_skill(skill):
-		return false
-	money -= SKILL_COSTS[skill]
+	money -= cost
 	skills[skill] = true
 	print("Purchased upgrade: ", skill, " | Money remaining: ", money)
 	return true
