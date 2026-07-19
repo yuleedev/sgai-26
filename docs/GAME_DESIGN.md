@@ -103,7 +103,7 @@ afford 2–3 purchases per game. Choosing WHICH is part of the game.
 Three numbers, shown separately, never combined (that tension is the serious-game point):
 **People lost · Zombies killed · Zombies cured**
 
-## 8. Decision logging **[ADDED — this is the graded research, not optional]**
+## 8. Decision logging
 
 Both game versions append one CSV row per day:
 
@@ -136,7 +136,7 @@ Comparing these files between humans and AI IS the research project.
 5. CSV logging (§8) — required for the research
 6. Polish (animations, sounds, fancy menus) — LAST
 
-## 11. Post-MVP ideas from the team plan (kept, staged, not deleted) **[ADDED section]**
+## 11. Post-MVP ideas from the team plan (kept, staged, not deleted) 
 
 - Income / weather traits per cell affecting play
 - Morale system
