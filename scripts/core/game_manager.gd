@@ -27,6 +27,25 @@ func _ready() -> void:
 	zombie_counts[zombie_cell] = STARTING_ZOMBIES
 	update_all_cells()
 	set_player_cell()
+	add_cell_icons()
+
+# white icons layered over the color tiles: hospital on the center/base cell,
+# a house on the 24 neighborhoods (icons by game-icons.net, CC BY 3.0 — see CREDITS.md)
+func add_cell_icons() -> void:
+	var hospital_icon: Texture2D = load("res://assets/icons/hospital.png")
+	var neighborhood_icon: Texture2D = load("res://assets/icons/neighborhood_SGAI.png")
+	var center := Vector2i(2, 2)
+	for x in range(GRID_SIZE):
+		for y in range(GRID_SIZE):
+			var cell := Vector2i(x, y)
+			var icon := Sprite2D.new()
+			icon.texture = hospital_icon if cell == center else neighborhood_icon
+			# scale whatever the source size is down to ~110px on the 200px tile
+			var target := 110.0 / icon.texture.get_width()
+			icon.scale = Vector2(target, target)
+			icon.position = grid.position + Vector2(x * 200 + 100, y * 200 + 100)
+			icon.modulate.a = 0.85
+			add_child(icon)
 
 func initialize_grid() -> void:
 	zombie_counts.clear()
