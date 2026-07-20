@@ -1,1 +1,3 @@
 res://scripts/core/game_manager.gd
+res://scripts/ui/comic_scene.gd
+res://scripts/ui/start_screen.gd
