@@ -1,0 +1,5 @@
+res://scripts/core/game_manager.gd
+res://scripts/ui/comic_scene.gd
+res://scripts/ui/start_screen.gd
+res://scenes/skill_tree.tscn
+res://scripts/ui/skill_tree.gd

@@ -15,8 +15,11 @@ const COLOR_TILES: Array[Vector2i] =[
 	Vector2i(3,0), # high zombies
 	Vector2i(4,0), # player
 ]
+
 # set variables for assets
 @onready var grid: TileMapLayer = $Grid
+var money := 0
+var skills: Dictionary = {}
 var zombie_cell := Vector2i.ZERO
 # store zombie count per cell
 var zombie_counts: Dictionary[Vector2i, int] = {}
@@ -101,3 +104,23 @@ func update_individual_cell(cell: Vector2i) -> void:
 func set_player_cell() -> void:
 	var center_cell := Vector2i(2,2)
 	grid.set_cell(center_cell, TILE_SOURCE_ID, COLOR_TILES[4])
+
+func earn_money(amount: int) -> void:
+	money += amount
+
+func has_skill(skill: String) -> bool:
+	return skills.get(skill, false)
+
+func buy_skill(skill: String, cost: int) -> bool:
+	if has_skill(skill):
+		return false
+	if money < cost:
+		return false
+	money -= cost
+	skills[skill] = true
+	print("Purchased upgrade: ", skill, " | Money remaining: ", money)
+	return true
+
+func _on_skills_pressed() -> void:
+	var tree := preload("res://scenes/skill_tree.tscn").instantiate()
+	add_child(tree)
