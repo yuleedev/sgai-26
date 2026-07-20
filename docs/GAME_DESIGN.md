@@ -38,8 +38,8 @@ One turn = one day, ~30 days max. Every day, in this exact order:
 2. **Infection grows inside cells**: each cell's infected convert ~30% of their count
    from healthy per day (rounded down, limited by healthy available).
    Also ~5% of each cell's infected **die naturally** per day — the infection runs its
-   course. This is our "zombies are only curable for a limited time" idea, made
-   simple: cure early or there's nobody left to cure. (5%/day means the average zombie
+   course. This is our "zombies are only treatable for a limited time" idea, made
+   simple: treat early or there's nobody left to treat. (5%/day means the average zombie
    lasts ~20 days — "they die after a time" without tracking individual timers.)
 3. **Spread to neighbor cells — chance-based**: each infected cell rolls once per
    up/down/left/right neighbor per day:
@@ -53,11 +53,11 @@ One turn = one day, ~30 days max. Every day, in this exact order:
 
 | Action | What happens |
 |---|---|
-| **CURE** a cell | ~20% of its infected become `cured` (immune). Costs 1 dose. |
+| **TREAT** a cell | ~20% of its infected become `cured` (immune). Costs 1 dose. |
 | **CLEAR** a cell | ~40% of its infected become `dead`. Free. The morally heavy option. |
 | **WAIT** | Skip today (the AI — and honest players — need a legal "do nothing"). |
 
-- Start with ~10 doses. No doses → CURE unavailable.
+- Start with ~10 doses. No doses → TREAT unavailable.
 - Buying an upgrade is a purchase alongside your action, not the action itself. ~decide
 
 ## 4. Money
@@ -68,20 +68,30 @@ you; letting them rot shrinks your budget.
 Display: internal units are small numbers for easy balancing; the UI shows them ×$1k —
 "Funding: $55k", upgrades cost "$100k", etc.
 
-## 5. PLAYER upgrades — 4 independent tracks with levels, NO tree
+## 5. PLAYER upgrades — 5 independent tracks with levels, NO tree
 
-Four separate tracks, no connections between them — buy any track, any order. Two tracks
-have a second level; level 2 requires level 1 of the SAME track only.
+Five separate tracks, no connections between them — buy any track, any order. Some
+tracks have a second level; level 2 requires level 1 of the SAME track only. Exact costs
+are all still TBD (marked below) — decide these once we start playtesting.
 
 | Track | Level 1 | Level 2 |
 |---|---|---|
-| Better Cure | ~$100k — CURE 20% → 35% | ~$200k — 35% → 50% |
-| Extra Doses | ~$80k — +5 doses | ~$120k — +5 more |
-| Rush Vaccine | ~$150k — vaccine 3 days earlier | — |
-| Quarantine | ~$120k — all spread chances halved | — |
+| Better Treatment | TBD — TREAT 20% → 35% | TBD — 35% → 50% |
+| Reinforced Clear | TBD one-time unlock — then each CLEAR use can optionally pay a small TBD fee for 40% → 55% kill (base free 40% CLEAR stays available too) | — |
+| Extra Doses | TBD — +5 doses | TBD — +5 more |
+| Rush Vaccine | TBD — vaccine 3 days earlier | — |
+| Quarantine | TBD — all spread chances halved | — |
 
-Economy check: lifetime income is ~$250–300k, maxing everything costs ~$770k — so you
-afford 2–3 purchases per game. Choosing WHICH is part of the game.
+Note: Reinforced Clear works differently from the rest of the table — it's the only
+track with a cost that repeats every time you use it, not a one-time purchase. This
+mirrors TREAT's dose cost, so both actions now have a "free but weaker" and a "costs a
+resource but stronger" version once unlocked.
+
+Economy check: lifetime income is roughly $250–300k (rough estimate, depends on how
+many people stay healthy — see open question below). Buying everything costs far more
+than that, so you'll only ever afford a handful of purchases per game. Choosing WHICH
+is part of the game. **Quarantine's price needs to land high enough that it isn't an
+auto-buy — flagged as an open balance question, not yet resolved.**
 
 (Not to be confused with the VIRUS "skill tree" idea — that's §11 post-MVP.)
 
@@ -89,7 +99,7 @@ afford 2–3 purchases per game. Choosing WHICH is part of the game.
 
 - Vaccine ready day ~25 (~22 rushed). Cannot be rushed further — that's the point: you
   can't win early, only lose less until rescue. When it arrives, all `healthy` become
-  `cured`, game ends. Still-infected at that moment count as lost — only cures save zombies.
+  `cured`, game ends. Still-infected at that moment count as lost — only treatment saves zombies.
 
 | Ending | Condition |
 |---|---|
@@ -118,7 +128,7 @@ Comparing these files between humans and AI IS the research project.
 
 - **RL-only for MVP** — no images/CNN. The AI sees numbers.
 - Python copy of §1–6 (no graphics), reusing the class baseline's DQN machinery. The
-  agent plays thousands of games, learns which cells to help and when curing beats clearing.
+  agent plays thousands of games, learns which cells to help and when treating beats clearing.
 - AI sees daily: 24 cells' numbers + doses + money + day + vaccine countdown.
   AI picks: cell + action, or WAIT, or an upgrade.
 - (Formally this is a Markov Decision Process — the "markov decision tree" from our
