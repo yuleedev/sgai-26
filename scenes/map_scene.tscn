@@ -24,6 +24,32 @@ tile_set = SubResource("TileSet_vlip3")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
+[node name="DayLabel" type="Label" parent="UI"]
+unique_name_in_owner = true
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 200.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 22
+text = "Day 1 / 30"
+
+[node name="FundingLabel" type="Label" parent="UI"]
+unique_name_in_owner = true
+offset_left = 10.0
+offset_top = 44.0
+offset_right = 200.0
+offset_bottom = 74.0
+theme_override_font_sizes/font_size = 18
+text = "Funding: $0"
+
+[node name="EndDayButton" type="Button" parent="UI"]
+unique_name_in_owner = true
+offset_left = 10.0
+offset_top = 80.0
+offset_right = 160.0
+offset_bottom = 120.0
+text = "End Day (Wait)"
+
 [node name="SkillsButton" type="Button" parent="UI"]
 anchors_preset = 0
 anchor_left = 1.0
@@ -35,4 +61,5 @@ offset_right = -10.0
 offset_bottom = 50.0
 text = "Skills"
 
+[connection signal="pressed" from="UI/EndDayButton" to="." method="_on_end_day_pressed"]
 [connection signal="pressed" from="UI/SkillsButton" to="." method="_on_skills_pressed"]
