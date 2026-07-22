@@ -74,7 +74,7 @@ func add_cell_icons() -> void:
 			icon.texture = hospital_icon if cell == BASE_CELL else neighborhood_icon
 			var target := 110.0 / icon.texture.get_width()
 			icon.scale = Vector2(target, target)
-			icon.position = grid.position + Vector2(x * 200 + 100, y * 200 + 100)
+			icon.position = grid.position + Vector2(x * TILE_PX + TILE_PX / 2.0, y * TILE_PX + TILE_PX / 2.0)
 			icon.modulate.a = 0.85
 			add_child(icon)
 
@@ -100,7 +100,7 @@ func seed_infection(cell: Vector2i, amount: int) -> void:
 	data["infected"] += converted
 
 func center_grid() -> void:
-	var grid_size_pixels := Vector2(GRID_SIZE * 200, GRID_SIZE * 200)
+	var grid_size_pixels := Vector2(GRID_SIZE * TILE_PX, GRID_SIZE * TILE_PX)
 	var window_size := get_viewport_rect().size
 	grid.position = (window_size - grid_size_pixels) / 2.0
 
