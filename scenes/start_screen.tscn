@@ -1,18 +1,180 @@
-[gd_scene load_steps=2 format=3 uid="uid://ddq645kn1bcsq"]
+[gd_scene format=3 uid="uid://ddq645kn1bcsq"]
 
 [ext_resource type="Script" uid="uid://8ex4vv4gcnbt" path="res://scripts/ui/start_screen.gd" id="1_tx5wa"]
+[ext_resource type="Texture2D" uid="uid://bjbrdeagw3nfi" path="res://assets/start screen/background.png" id="2_he1sj"]
+[ext_resource type="Texture2D" uid="uid://bys1ks27j66mq" path="res://assets/start screen/normal start button.PNG" id="3_ka6nf"]
+[ext_resource type="Texture2D" uid="uid://bg63t5ukncrjl" path="res://assets/start screen/left hand.PNG" id="3_r2jwc"]
+[ext_resource type="Texture2D" uid="uid://qff8m7ip3pop" path="res://assets/start screen/hover start button.PNG" id="3_ws7p0"]
+[ext_resource type="Texture2D" uid="uid://4mtasc4ne3ih" path="res://assets/start screen/title.png" id="5_ka6nf"]
+[ext_resource type="Texture2D" uid="uid://cmsowwwabjdrl" path="res://assets/start screen/right hand.PNG" id="5_ws7p0"]
+[ext_resource type="Texture2D" uid="uid://bpg3s6dc00qnk" path="res://assets/start screen/fog.png" id="6_a7uje"]
+[ext_resource type="Texture2D" uid="uid://bkaj3dhyg3ahg" path="res://assets/start screen/fingers.PNG" id="8_pcj7n"]
+[ext_resource type="Texture2D" uid="uid://6e8huieevuf1" path="res://assets/start screen/subtitle.PNG" id="8_ws7p0"]
+[ext_resource type="Texture2D" uid="uid://b33w2fon5ncp0" path="res://assets/start screen/press start button.PNG" id="10_a4px2"]
+[ext_resource type="Texture2D" uid="uid://dfi7b1h0j5h3m" path="res://assets/start screen/1.PNG" id="11_37qom"]
+[ext_resource type="Texture2D" uid="uid://bf688do8otdk" path="res://assets/start screen/2.PNG" id="12_a7uje"]
+[ext_resource type="Texture2D" uid="uid://cgpbui5tdu0u4" path="res://assets/start screen/3.PNG" id="13_8c457"]
+[ext_resource type="Texture2D" uid="uid://chqpib4aelugd" path="res://assets/start screen/4.PNG" id="14_3opy0"]
+[ext_resource type="Texture2D" uid="uid://bgahgu6g2o2pm" path="res://assets/start screen/5.PNG" id="15_53rsf"]
+[ext_resource type="Texture2D" uid="uid://bv5xaxdi0nuyv" path="res://assets/start screen/6.PNG" id="16_qlcmr"]
+[ext_resource type="Texture2D" uid="uid://bob7ccep07bh3" path="res://assets/start screen/7.PNG" id="17_y5w4g"]
+[ext_resource type="Texture2D" uid="uid://di31uoiemcmxq" path="res://assets/start screen/8.PNG" id="18_r6qw7"]
+[ext_resource type="Texture2D" uid="uid://7jcntbmdwrqo" path="res://assets/start screen/9.PNG" id="19_0y2qr"]
+[ext_resource type="Texture2D" uid="uid://dd1705hwou88l" path="res://assets/start screen/10.PNG" id="20_bjnkw"]
+[ext_resource type="AudioStream" uid="uid://c3fisaxxpnjlw" path="res://assets/audio/start_game.mp3" id="21_37qom"]
 
-[node name="StartScreen" type="Control"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ka6nf"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ecdxc"]
+
+[node name="StartScreen" type="Control" unique_id=463022740]
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_tx5wa")
+start_normal_texture = ExtResource("3_ka6nf")
+start_hover_texture = ExtResource("3_ws7p0")
+start_pressed_texture = ExtResource("10_a4px2")
 
-[node name="StartComic" type="Button" parent="."]
+[node name="Background" type="TextureRect" parent="." unique_id=1897150103]
 layout_mode = 0
-offset_left = 760.0
-offset_top = 390.0
-offset_right = 1272.0
-offset_bottom = 630.0
-text = "start"
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("2_he1sj")
 
-[connection signal="pressed" from="StartComic" to="." method="_on_start_comic_pressed"]
+[node name="Fog" type="TextureRect" parent="." unique_id=2028079441]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("6_a7uje")
+
+[node name="LeftHand" type="TextureRect" parent="." unique_id=1083632285]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -167.0
+offset_right = 1922.0
+offset_bottom = 913.0
+texture = ExtResource("3_r2jwc")
+
+[node name="RightHand" type="TextureRect" parent="." unique_id=707255027]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -167.0
+offset_right = 1922.0
+offset_bottom = 913.0
+texture = ExtResource("5_ws7p0")
+
+[node name="Title" type="TextureRect" parent="." unique_id=1466084270]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("5_ka6nf")
+
+[node name="Fingers" type="TextureRect" parent="." unique_id=928982761]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -167.0
+offset_right = 1922.0
+offset_bottom = 913.0
+texture = ExtResource("8_pcj7n")
+
+[node name="Subtitle" type="TextureRect" parent="." unique_id=1071755429]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("8_ws7p0")
+
+[node name="StartArt" type="TextureRect" parent="." unique_id=1864157574]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+texture = ExtResource("3_ka6nf")
+
+[node name="RevealMask" type="TextureRect" parent="." unique_id=1858902938]
+clip_children = 1
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+texture = ExtResource("10_a4px2")
+
+[node name="1" type="TextureRect" parent="RevealMask" unique_id=805304414]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("11_37qom")
+
+[node name="2" type="TextureRect" parent="RevealMask" unique_id=1249028476]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("12_a7uje")
+
+[node name="3" type="TextureRect" parent="RevealMask" unique_id=712934051]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("13_8c457")
+
+[node name="4" type="TextureRect" parent="RevealMask" unique_id=641586473]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("14_3opy0")
+
+[node name="5" type="TextureRect" parent="RevealMask" unique_id=940345784]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("15_53rsf")
+
+[node name="6" type="TextureRect" parent="RevealMask" unique_id=1959686343]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("16_qlcmr")
+
+[node name="7" type="TextureRect" parent="RevealMask" unique_id=618615373]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("17_y5w4g")
+
+[node name="8" type="TextureRect" parent="RevealMask" unique_id=1940828928]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("18_r6qw7")
+
+[node name="9" type="TextureRect" parent="RevealMask" unique_id=80219454]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("19_0y2qr")
+
+[node name="10" type="TextureRect" parent="RevealMask" unique_id=376392627]
+layout_mode = 0
+offset_left = -15.0
+offset_top = 11.0
+offset_right = 1905.0
+offset_bottom = 1091.0
+texture = ExtResource("20_bjnkw")
+
+[node name="FadeOverlay" type="ColorRect" parent="." unique_id=1946252612]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0, 0, 0, 1)
+
+[node name="StartButton" type="Button" parent="." unique_id=946056837]
+layout_mode = 0
+offset_left = 590.3453
+offset_top = 765.85
+offset_right = 1332.9507
+offset_bottom = 957.85
+rotation = -0.104727104
+theme_override_styles/normal = SubResource("StyleBoxEmpty_ka6nf")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_ecdxc")
+
+[node name="StartGameSound" type="AudioStreamPlayer" parent="." unique_id=957447882]
+stream = ExtResource("21_37qom")
+volume_db = -25.0
+pitch_scale = 0.8

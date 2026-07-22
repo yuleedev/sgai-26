@@ -1,1 +1,2 @@
-res://scripts/core/game_manager.gd
+res://scripts/ui/start_screen.gd
+res://scenes/start_screen.tscn
