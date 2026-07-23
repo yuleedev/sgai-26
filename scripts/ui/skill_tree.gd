@@ -4,6 +4,7 @@ extends CanvasLayer
 @onready var close_button: Button = %CloseButton
 
 @onready var visual_tree: Control = %VisualTree
+@onready var detail_box: PanelContainer = %DetailBox
 @onready var detail_panel: VBoxContainer = %DetailPanel
 @onready var detail_hint: Label = %DetailHint
 @onready var detail_content: VBoxContainer = %DetailContent
@@ -16,7 +17,7 @@ extends CanvasLayer
 @onready var bg_overlay: ColorRect = $Background
 @onready var panel: PanelContainer = $Panel
 
-var _bangers: FontFile
+var _ui_font: Font
 
 const SKILLS := [
 		{
@@ -25,7 +26,7 @@ const SKILLS := [
 			desc = "Treat 20% → 35%",
 			cost = 90,
 			icon_path = "res://assets/icons/upgrade_treatment.svg",
-			pos = Vector2(40, 140),
+			pos = Vector2(86, 135),
 			prereqs = [],
 		},
 		{
@@ -34,7 +35,7 @@ const SKILLS := [
 			desc = "Treat 35% → 50%",
 			cost = 160,
 			icon_path = "res://assets/icons/upgrade_treatment.svg",
-			pos = Vector2(40, 340),
+			pos = Vector2(86, 405),
 			prereqs = ["better_treatment_1"],
 		},
 		{
@@ -43,7 +44,7 @@ const SKILLS := [
 			desc = "+5 doses",
 			cost = 70,
 			icon_path = "res://assets/icons/upgrade_doses.svg",
-			pos = Vector2(170, 140),
+			pos = Vector2(306, 135),
 			prereqs = [],
 		},
 		{
@@ -52,7 +53,7 @@ const SKILLS := [
 			desc = "+5 more",
 			cost = 120,
 			icon_path = "res://assets/icons/upgrade_doses.svg",
-			pos = Vector2(170, 340),
+			pos = Vector2(306, 405),
 			prereqs = ["extra_doses_1"],
 		},
 		{
@@ -61,7 +62,7 @@ const SKILLS := [
 			desc = "Unlock paid Clear (55% kill for $8K)",
 			cost = 50,
 			icon_path = "res://assets/icons/upgrade_clear.svg",
-			pos = Vector2(300, 140),
+			pos = Vector2(526, 135),
 			prereqs = [],
 		},
 		{
@@ -70,7 +71,7 @@ const SKILLS := [
 			desc = "Vaccine unlocked at day 22",
 			cost = 140,
 			icon_path = "res://assets/icons/upgrade_vaccine.svg",
-			pos = Vector2(430, 140),
+			pos = Vector2(746, 135),
 			prereqs = [],
 		},
 		{
@@ -79,7 +80,7 @@ const SKILLS := [
 			desc = "All spread chances halved",
 			cost = 220,
 			icon_path = "res://assets/icons/upgrade_quarantine.svg",
-			pos = Vector2(560, 140),
+			pos = Vector2(746, 405),
 			prereqs = [],
 		},
 	]
@@ -89,20 +90,23 @@ const CONNECTIONS := [
 	["extra_doses_1", "extra_doses_2"],
 ]
 
-const NODE_SIZE := 56
+const NODE_SIZE := 92
 const NODE_RADIUS := NODE_SIZE / 2
 
 var upgrade_buttons: Dictionary = {}
 var selected_key: String = ""
 
 func _ready() -> void:
-	_bangers = load("res://assets/Bangers-Regular.ttf")
+	_ui_font = _make_ui_font()
 	_apply_theme()
 	build_visual_tree()
 	visual_tree.draw.connect(_on_visual_tree_draw)
 	close_button.pressed.connect(_on_close_pressed)
 	detail_buy_button.pressed.connect(_on_detail_buy_pressed)
 	hide_details()
+
+func _make_ui_font() -> Font:
+	return load("res://assets/Play-Regular.ttf")
 
 func _apply_theme() -> void:
 	bg_overlay.color = Color(0.06, 0.02, 0.02, 0.85)
@@ -116,50 +120,73 @@ func _apply_theme() -> void:
 	panel_bg.border_width_top = 2
 	panel_bg.border_width_bottom = 2
 	panel_bg.border_color = Color(0.25, 0.05, 0.05)
-	panel_bg.content_margin_left = 12
-	panel_bg.content_margin_right = 12
-	panel_bg.content_margin_top = 8
-	panel_bg.content_margin_bottom = 8
+	panel_bg.content_margin_left = 32
+	panel_bg.content_margin_right = 32
+	panel_bg.content_margin_top = 26
+	panel_bg.content_margin_bottom = 26
 	panel.add_theme_stylebox_override("panel", panel_bg)
 
 	panel.add_theme_color_override("font_color", Color(0.88, 0.88, 0.88))
 
 	var title := $Panel/MainVBox/Header/Title as Label
-	if title != null and _bangers != null:
-		title.add_theme_font_override("font", _bangers)
+	if title != null and _ui_font != null:
+		title.add_theme_font_override("font", _ui_font)
 		title.add_theme_font_size_override("font_size", 32)
 		title.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 
-	money_label.add_theme_font_override("font", _bangers)
-	money_label.add_theme_font_size_override("font_size", 20)
+	money_label.add_theme_font_override("font", _ui_font)
+	money_label.add_theme_font_size_override("font_size", 32)
 	money_label.add_theme_color_override("font_color", Color(0.95, 0.75, 0.2))
 
 	detail_hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	detail_hint.add_theme_font_size_override("font_size", 16)
 
-	detail_name.add_theme_font_override("font", _bangers)
+	detail_name.add_theme_font_override("font", _ui_font)
 	detail_name.add_theme_font_size_override("font_size", 22)
 	detail_name.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 
 	detail_desc.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	detail_desc.add_theme_font_size_override("font_size", 14)
 
-	detail_cost.add_theme_font_override("font", _bangers)
+	detail_cost.add_theme_font_override("font", _ui_font)
 	detail_cost.add_theme_font_size_override("font_size", 18)
 	detail_cost.add_theme_color_override("font_color", Color(0.95, 0.75, 0.2))
 
-	detail_purchased.add_theme_font_override("font", _bangers)
+	detail_purchased.add_theme_font_override("font", _ui_font)
 	detail_purchased.add_theme_font_size_override("font_size", 20)
 	detail_purchased.add_theme_color_override("font_color", Color(0.3, 0.9, 0.3))
 
-	detail_buy_button.add_theme_font_override("font", _bangers)
+	detail_buy_button.add_theme_font_override("font", _ui_font)
 	detail_buy_button.add_theme_font_size_override("font_size", 18)
 
-	close_button.add_theme_font_override("font", _bangers)
+	close_button.add_theme_font_override("font", _ui_font)
 	close_button.add_theme_font_size_override("font_size", 18)
 
 	_style_dark_button(detail_buy_button)
 	_style_dark_button(close_button)
+
+	detail_content.add_theme_constant_override("separation", 12)
+	detail_panel.add_theme_constant_override("separation", 12)
+	var main_vbox := $Panel/MainVBox as VBoxContainer
+	if main_vbox != null:
+		main_vbox.add_theme_constant_override("separation", 18)
+	detail_buy_button.custom_minimum_size = Vector2(0, 44)
+	close_button.custom_minimum_size = Vector2(120, 44)
+
+	var detail_card := StyleBoxFlat.new()
+	detail_card.bg_color = Color(0.05, 0.05, 0.06, 0.6)
+	detail_card.set_corner_radius_all(8)
+	detail_card.corner_detail = 8
+	detail_card.border_width_left = 1
+	detail_card.border_width_right = 1
+	detail_card.border_width_top = 1
+	detail_card.border_width_bottom = 1
+	detail_card.border_color = Color(0.2, 0.2, 0.22)
+	detail_card.content_margin_left = 20
+	detail_card.content_margin_right = 20
+	detail_card.content_margin_top = 20
+	detail_card.content_margin_bottom = 20
+	detail_box.add_theme_stylebox_override("panel", detail_card)
 
 
 func _style_dark_button(btn: Button) -> void:
@@ -358,6 +385,18 @@ func build_visual_tree() -> void:
 		upgrade_buttons[skill.key] = btn
 		visual_tree.add_child(btn)
 
+		var name_label := Label.new()
+		name_label.text = skill.name
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		name_label.custom_minimum_size = Vector2(150, 0)
+		name_label.position = skill.pos + Vector2(-75, NODE_RADIUS + 8)
+		if _ui_font != null:
+			name_label.add_theme_font_override("font", _ui_font)
+		name_label.add_theme_font_size_override("font_size", 17)
+		name_label.add_theme_color_override("font_color", Color(0.78, 0.78, 0.82))
+		visual_tree.add_child(name_label)
+
 	update_node_colors()
 
 func _on_node_pressed(key: String) -> void:
@@ -383,12 +422,12 @@ func _on_visual_tree_draw() -> void:
 		else:
 			color = Color(0.3, 0.2, 0.2, 0.5)
 
-		visual_tree.draw_line(from_pos, to_pos, color, 2.5, true)
+		visual_tree.draw_line(from_pos, to_pos, color, 4.0, true)
 
 	if selected_key != "":
 		var skill = _get_skill(selected_key)
 		if skill != null:
-			visual_tree.draw_circle(skill.pos, NODE_RADIUS + 5, Color(1.0, 0.7, 0.0, 0.9), false, 3.0)
+			visual_tree.draw_circle(skill.pos, NODE_RADIUS + 6, Color(1.0, 0.7, 0.0, 0.9), false, 4.0)
 
 
 

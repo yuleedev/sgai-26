@@ -73,7 +73,7 @@ func style_start_button() -> void:
 	start_button.add_theme_stylebox_override("normal", normal)
 	start_button.add_theme_stylebox_override("hover", hover)
 	start_button.add_theme_stylebox_override("pressed", pressed)
-	start_button.add_theme_font_override("font", preload("res://assets/Bangers-Regular.ttf"))
+	start_button.add_theme_font_override("font", load("res://assets/Play-Regular.ttf"))
 	start_button.add_theme_font_size_override("font_size", 44)
 	start_button.add_theme_color_override("font_color", Color("2b2620"))
 	start_button.add_theme_color_override("font_hover_color", Color("2b2620"))
