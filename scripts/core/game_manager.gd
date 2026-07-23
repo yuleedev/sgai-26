@@ -80,11 +80,14 @@ func _ready() -> void:
 	ensure_log_headers()
 	doses = max_doses
 	initialize_grid()
+	create_map_background()
+	create_grid_frame()
 	zombie_cell = random_outer_cell()
 	seed_infection(zombie_cell, STARTING_ZOMBIES)
 	update_all_cells()
 	set_player_cell()
 	add_cell_icons()
+	create_grid_lines()
 	create_hover_popup()
 	create_day_controls()
 	create_origin_marker()
@@ -112,7 +115,81 @@ func add_cell_icons() -> void:
 			icon.scale = Vector2(target, target)
 			icon.position = grid.position + Vector2(x * TILE_PX + TILE_PX / 2.0, y * TILE_PX + TILE_PX / 2.0)
 			icon.modulate.a = 0.85
+			icon.z_index = 3
 			add_child(icon)
+
+func create_map_background() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = -10
+	add_child(layer)
+
+	var base := ColorRect.new()
+	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	base.color = Color(0.05, 0.04, 0.05)
+	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(base)
+
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(0.17, 0.13, 0.14))
+	gradient.set_color(1, Color(0.04, 0.03, 0.04))
+	gradient.add_point(0.55, Color(0.11, 0.08, 0.09))
+
+	var tex := GradientTexture2D.new()
+	tex.gradient = gradient
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.42)
+	tex.fill_to = Vector2(1.05, 1.05)
+	tex.width = 512
+	tex.height = 512
+
+	var vignette := TextureRect.new()
+	vignette.texture = tex
+	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(vignette)
+
+func create_grid_frame() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = -5
+	add_child(layer)
+
+	var pad := 26.0
+	var grid_px := float(GRID_SIZE * TILE_PX)
+	var frame := Panel.new()
+	frame.position = grid.position - Vector2(pad, pad)
+	frame.size = Vector2(grid_px + pad * 2.0, grid_px + pad * 2.0)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.11, 0.10, 0.11)
+	sb.set_corner_radius_all(20)
+	sb.corner_detail = 12
+	sb.set_border_width_all(3)
+	sb.border_color = Color(0.36, 0.11, 0.11)
+	sb.shadow_color = Color(0, 0, 0, 0.55)
+	sb.shadow_size = 26
+	frame.add_theme_stylebox_override("panel", sb)
+	layer.add_child(frame)
+
+func create_grid_lines() -> void:
+	var grid_px := float(GRID_SIZE * TILE_PX)
+	for i in range(GRID_SIZE + 1):
+		var offset := float(i * TILE_PX)
+		_add_grid_line(
+			grid.position + Vector2(offset, 0),
+			grid.position + Vector2(offset, grid_px))
+		_add_grid_line(
+			grid.position + Vector2(0, offset),
+			grid.position + Vector2(grid_px, offset))
+
+func _add_grid_line(from: Vector2, to: Vector2) -> void:
+	var line := Line2D.new()
+	line.points = PackedVector2Array([from, to])
+	line.width = 3.0
+	line.default_color = Color(0.03, 0.02, 0.03, 0.55)
+	line.z_index = 2
+	add_child(line)
 
 func initialize_grid() -> void:
 	cell_data.clear()
@@ -434,6 +511,7 @@ func create_day_controls() -> void:
 	selection_highlight.width = 6.0
 	selection_highlight.default_color = Color(1.0, 0.85, 0.2)
 	selection_highlight.visible = false
+	selection_highlight.z_index = 5
 	add_child(selection_highlight)
 
 func _make_ui_font() -> Font:
@@ -615,12 +693,11 @@ func create_origin_marker() -> void:
 	origin_marker.text = "ORIGIN"
 	origin_marker.add_theme_font_size_override("font_size", 30)
 	origin_marker.add_theme_color_override("font_color", Color.WHITE)
-	origin_marker.add_theme_color_override("font_outline_color", Color.BLACK)
-	origin_marker.add_theme_constant_override("outline_size", 8)
 	origin_marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	origin_marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	origin_marker.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	origin_marker.size = Vector2(TILE_PX, TILE_PX)
-	origin_marker.position = grid.position + Vector2(zombie_cell.x * TILE_PX, zombie_cell.y * TILE_PX)
+	origin_marker.position = grid.position + Vector2(zombie_cell.x * TILE_PX, zombie_cell.y * TILE_PX + 14)
+	origin_marker.z_index = 4
 	add_child(origin_marker)
 
 func refresh_status() -> void:
