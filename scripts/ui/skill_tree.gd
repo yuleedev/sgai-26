@@ -67,7 +67,7 @@ const SKILLS := [
 		{
 			key = "rush_vaccine",
 			name = "Rush Vaccine",
-			desc = "Vaccine unlocked at day 27",
+			desc = "Vaccine unlocked at day 22",
 			cost = 140,
 			icon_path = "res://assets/icons/upgrade_vaccine.svg",
 			pos = Vector2(430, 140),

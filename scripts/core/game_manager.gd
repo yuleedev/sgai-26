@@ -10,7 +10,6 @@ const MAX_POPULATION := 150
 const BASE_CELL := Vector2i(2, 2)
 
 const MAX_DAYS := 30
-const VACCINE_DAY := 25  # the vaccine actually arrives here — MAX_DAYS is just a safety cap
 const WIN_SURVIVAL_THRESHOLD := 0.5
 const INFECT_CONVERT_RATE := 0.30
 const INFECT_DEATH_RATE := 0.05
@@ -48,7 +47,7 @@ var skills: Dictionary = {}
 var doses: int
 var spread_multiplier: float = 1.0
 var reinforced_clear_fee: int = 0
-var vaccine_unlock_day: int = 30
+var vaccine_unlock_day: int = 25
 var selected_cell := Vector2i(-1, -1)
 var original_population := 0  # sum of all 24 neighborhoods' starting population
 var total_zombies_cured := 0  # people actually treated by the player — NOT everyone who survived
@@ -240,7 +239,7 @@ func check_ending() -> void:
 		finish_game(people_lost)
 		return
 
-	if day >= VACCINE_DAY or day > MAX_DAYS:
+	if day >= vaccine_unlock_day or day > MAX_DAYS:
 		var still_infected := 0
 		var total_dead := 0
 		for cell in cell_data:
@@ -398,7 +397,7 @@ func buy_skill(skill: String, cost: int) -> bool:
 		"reinforced_clear":
 			reinforced_clear_fee = 8
 		"rush_vaccine":
-			vaccine_unlock_day = 27
+			vaccine_unlock_day = 22
 		"quarantine":
 			spread_multiplier = 0.5
 	var skill_names := {
