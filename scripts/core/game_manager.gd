@@ -52,6 +52,13 @@ var hover_popup: PanelContainer
 var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
 
+var total_people_lost: int = 0
+var total_zombies_killed: int = 0
+var total_zombies_cured: int = 0
+var game_ended := false
+@export_file("*.tscn")
+var end_screen_path := "res://scenes/end_screen.tscn"
+
 func _ready() -> void:
 	initialize_grid()
 	zombie_cell = random_outer_cell()
@@ -150,14 +157,26 @@ func earn_money(amount: int) -> void:
 	money += amount
 
 func advance_day() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
 	grow_infection()
 	spread_infection()
 	collect_income()
-	day += 1
 	update_all_cells()
+	if day >= MAX_DAYS:
+		end_game()
+		return
+	day += 1
 	refresh_status()
+
+func end_game() -> void:
+	if game_ended:
+		return
+	game_ended = true
+	GameResults.people_lost = total_people_lost
+	GameResults.zombies_killed = total_zombies_killed
+	GameResults.zombies_cured = total_zombies_cured
+	get_tree().change_scene_to_file(end_screen_path)
 
 func grow_infection() -> void:
 	for cell in cell_data:
@@ -172,6 +191,7 @@ func grow_infection() -> void:
 		data["healthy"] -= converted
 		data["infected"] += converted - died
 		data["dead"] += died
+		total_people_lost += died
 
 func spread_infection() -> void:
 	var source_infected: Dictionary[Vector2i, int] = {}
@@ -206,7 +226,7 @@ func has_valid_selection() -> bool:
 	return cell_data.has(selected_cell) and selected_cell != BASE_CELL
 
 func _on_treat_pressed() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
@@ -218,12 +238,13 @@ func _on_treat_pressed() -> void:
 	var cured: int = int(floor(data["infected"] * TREAT_CURE_RATE))
 	data["infected"] -= cured
 	data["cured"] += cured
+	total_zombies_cured += cured
 	doses -= 1
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
 	advance_day()
 
 func _on_clear_pressed() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
@@ -232,11 +253,12 @@ func _on_clear_pressed() -> void:
 	var killed: int = int(floor(data["infected"] * CLEAR_KILL_RATE))
 	data["infected"] -= killed
 	data["dead"] += killed
+	total_zombies_killed += killed
 	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
 	advance_day()
 
 func _on_wait_pressed() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
 	set_last_action("Waited")
 	advance_day()
@@ -292,6 +314,8 @@ func add_action_button(label: String, top: float, handler: Callable) -> Button:
 	return button
 
 func _unhandled_input(event: InputEvent) -> void:
+	if game_ended:
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var cell := grid.local_to_map(grid.to_local(get_global_mouse_position()))
 		if cell_data.has(cell) and cell != BASE_CELL:

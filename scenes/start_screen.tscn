@@ -152,10 +152,8 @@ texture = ExtResource("19_0y2qr")
 
 [node name="10" type="TextureRect" parent="RevealMask" unique_id=376392627]
 layout_mode = 0
-offset_left = -15.0
-offset_top = 11.0
-offset_right = 1905.0
-offset_bottom = 1091.0
+offset_right = 1920.0
+offset_bottom = 1080.0
 texture = ExtResource("20_bjnkw")
 
 [node name="FadeOverlay" type="ColorRect" parent="." unique_id=1946252612]
