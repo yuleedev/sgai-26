@@ -8,11 +8,13 @@ const MAX_POPULATION := 150
 const BASE_CELL := Vector2i(2, 2)
 
 const MAX_DAYS := 30
+const VACCINE_DAY := 25  # the vaccine actually arrives here — MAX_DAYS is just a safety cap
+const WIN_SURVIVAL_THRESHOLD := 0.5
 const INFECT_CONVERT_RATE := 0.30
 const INFECT_DEATH_RATE := 0.05
-const SPREAD_CHANCE_PER_INFECTED := 0.005
+const SPREAD_CHANCE_PER_INFECTED := 0.02
 const SPREAD_CHANCE_CAP := 0.60
-const SPREAD_INFECT_AMOUNT := 2
+const SPREAD_INFECT_AMOUNT := 4
 const INCOME_PER_DAY := 10
 const INCOME_PER_HEALTHY := 100
 const NEIGHBOR_OFFSETS: Array[Vector2i] = [
@@ -35,12 +37,24 @@ const COLOR_TILES: Array[Vector2i] =[
 	Vector2i(4,0),
 ]
 
+signal game_ended_signal(ending: String, people_lost: int, zombies_killed: int, zombies_cured: int, total_population: int)
+
 @onready var grid: TileMapLayer = $Grid
 var money := 0
 var day := 1
 var skills: Dictionary = {}
 var doses := STARTING_DOSES
 var selected_cell := Vector2i(-1, -1)
+var original_population := 0  # sum of all 24 neighborhoods' starting population
+var total_zombies_cured := 0  # people actually treated by the player — NOT everyone who survived
+var total_zombies_killed := 0  # people killed by CLEAR — NOT natural deaths
+var game_ended := false
+var ending_result := ""
+var last_action_type := "WAIT"
+var last_action_cell := Vector2i(-1, -1)
+var game_id := ""
+const LOG_PATH := "user://log.csv"
+const SUMMARY_PATH := "user://summary.csv"
 var status_label: Label
 var action_label: Label
 var treat_button: Button
@@ -53,6 +67,8 @@ var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
 
 func _ready() -> void:
+	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
+	ensure_log_headers()
 	initialize_grid()
 	zombie_cell = random_outer_cell()
 	seed_infection(zombie_cell, STARTING_ZOMBIES)
@@ -63,6 +79,16 @@ func _ready() -> void:
 	create_day_controls()
 	create_origin_marker()
 	refresh_status()
+
+func ensure_log_headers() -> void:
+	if not FileAccess.file_exists(LOG_PATH):
+		var f := FileAccess.open(LOG_PATH, FileAccess.WRITE)
+		f.store_line("game_id,player_type,day,action,cell_x,cell_y,doses_left,money,total_healthy,total_infected,total_cured,total_dead")
+		f.close()
+	if not FileAccess.file_exists(SUMMARY_PATH):
+		var f := FileAccess.open(SUMMARY_PATH, FileAccess.WRITE)
+		f.store_line("game_id,player_type,ending,days_played,people_lost,zombies_killed,zombies_cured")
+		f.close()
 
 func add_cell_icons() -> void:
 	var hospital_icon: Texture2D = load("res://assets/icons/hospital.png")
@@ -80,10 +106,12 @@ func add_cell_icons() -> void:
 
 func initialize_grid() -> void:
 	cell_data.clear()
+	original_population = 0
 	for x in range(GRID_SIZE):
 		for y in range(GRID_SIZE):
 			var cell := Vector2i(x, y)
 			var population := 0 if cell == BASE_CELL else randi_range(MIN_POPULATION, MAX_POPULATION)
+			original_population += population
 			cell_data[cell] = {
 				"healthy": population,
 				"infected": 0,
@@ -150,14 +178,92 @@ func earn_money(amount: int) -> void:
 	money += amount
 
 func advance_day() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
 	grow_infection()
 	spread_infection()
 	collect_income()
+	log_day_row()
 	day += 1
 	update_all_cells()
 	refresh_status()
+	check_ending()
+
+func log_day_row() -> void:
+	var total_healthy := 0
+	var total_infected := 0
+	var total_cured := 0
+	var total_dead := 0
+	for cell in cell_data:
+		if cell == BASE_CELL:
+			continue
+		var d: Dictionary = cell_data[cell]
+		total_healthy += d["healthy"]
+		total_infected += d["infected"]
+		total_cured += d["cured"]
+		total_dead += d["dead"]
+
+	var f := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE)
+	f.seek_end()
+	f.store_line("%s,human,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		game_id, day, last_action_type, last_action_cell.x, last_action_cell.y,
+		doses, money, total_healthy, total_infected, total_cured, total_dead,
+	])
+	f.close()
+
+func check_ending() -> void:
+	var all_overrun := true
+	for cell in cell_data:
+		if cell == BASE_CELL:
+			continue
+		var d: Dictionary = cell_data[cell]
+		if d["healthy"] > 0 or d["cured"] > 0:
+			all_overrun = false
+			break
+
+	if all_overrun:
+		var people_lost := 0
+		for cell in cell_data:
+			if cell == BASE_CELL:
+				continue
+			people_lost += cell_data[cell]["infected"] + cell_data[cell]["dead"]
+		ending_result = "LOSS"
+		finish_game(people_lost)
+		return
+
+	if day >= VACCINE_DAY or day > MAX_DAYS:
+		var still_infected := 0
+		var total_dead := 0
+		for cell in cell_data:
+			if cell == BASE_CELL:
+				continue
+			var d: Dictionary = cell_data[cell]
+			still_infected += d["infected"]
+			total_dead += d["dead"]
+			d["cured"] += d["healthy"]  # vaccine protects everyone still healthy
+			d["healthy"] = 0
+			d["infected"] = 0
+		update_all_cells()
+
+		var alive := 0
+		for cell in cell_data:
+			if cell == BASE_CELL:
+				continue
+			alive += cell_data[cell]["cured"]
+		var survival_rate := float(alive) / float(original_population) if original_population > 0 else 0.0
+		ending_result = "WIN" if survival_rate >= WIN_SURVIVAL_THRESHOLD else "PYRRHIC"
+		finish_game(total_dead + still_infected)
+
+func finish_game(people_lost: int) -> void:
+	game_ended = true
+	var f := FileAccess.open(SUMMARY_PATH, FileAccess.READ_WRITE)
+	f.seek_end()
+	f.store_line("%s,human,%s,%d,%d,%d,%d" % [
+		game_id, ending_result, day, people_lost, total_zombies_killed, total_zombies_cured,
+	])
+	f.close()
+	refresh_status()
+	game_ended_signal.emit(ending_result, people_lost, total_zombies_killed, total_zombies_cured, original_population)
 
 func grow_infection() -> void:
 	for cell in cell_data:
@@ -167,7 +273,11 @@ func grow_infection() -> void:
 		var infected: int = data["infected"]
 		if infected <= 0:
 			continue
-		var converted: int = min(int(floor(infected * INFECT_CONVERT_RATE)), data["healthy"])
+		# at least 1/day once infected > 0 — otherwise floor() truncation freezes
+		# small counts forever (e.g. floor(2 * 0.30) == 0), which silently kills
+		# spread: a freshly-seeded neighbor cell could never grow past its seed.
+		var growth: int = max(1, int(floor(infected * INFECT_CONVERT_RATE)))
+		var converted: int = min(growth, data["healthy"])
 		var died: int = min(int(floor(infected * INFECT_DEATH_RATE)), infected)
 		data["healthy"] -= converted
 		data["infected"] += converted - died
@@ -206,7 +316,7 @@ func has_valid_selection() -> bool:
 	return cell_data.has(selected_cell) and selected_cell != BASE_CELL
 
 func _on_treat_pressed() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
@@ -219,11 +329,14 @@ func _on_treat_pressed() -> void:
 	data["infected"] -= cured
 	data["cured"] += cured
 	doses -= 1
+	total_zombies_cured += cured
+	last_action_type = "TREAT"
+	last_action_cell = selected_cell
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
 	advance_day()
 
 func _on_clear_pressed() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
@@ -232,12 +345,17 @@ func _on_clear_pressed() -> void:
 	var killed: int = int(floor(data["infected"] * CLEAR_KILL_RATE))
 	data["infected"] -= killed
 	data["dead"] += killed
+	total_zombies_killed += killed
+	last_action_type = "CLEAR"
+	last_action_cell = selected_cell
 	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
 	advance_day()
 
 func _on_wait_pressed() -> void:
-	if day > MAX_DAYS:
+	if game_ended:
 		return
+	last_action_type = "WAIT"
+	last_action_cell = Vector2i(-1, -1)
 	set_last_action("Waited")
 	advance_day()
 
