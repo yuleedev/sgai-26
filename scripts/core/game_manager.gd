@@ -77,9 +77,6 @@ var hovered_cell := Vector2i(-1, -1)
 var skill_tree_ref: CanvasLayer
 
 var total_people_lost: int = 0
-var total_zombies_killed: int = 0
-var total_zombies_cured: int = 0
-var game_ended := false
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
 
