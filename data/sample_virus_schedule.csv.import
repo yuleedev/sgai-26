@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bjg510lxbts6o"
+
+[deps]
+
+files=["res://data/sample_virus_schedule.upgrade.translation", "res://data/sample_virus_schedule.value.translation", "res://data/sample_virus_schedule.target.translation", "res://data/sample_virus_schedule.target.translation", "res://data/sample_virus_schedule.description.translation"]
+
+source_file="res://data/sample_virus_schedule.csv"
+dest_files=["res://data/sample_virus_schedule.upgrade.translation", "res://data/sample_virus_schedule.value.translation", "res://data/sample_virus_schedule.target.translation", "res://data/sample_virus_schedule.target.translation", "res://data/sample_virus_schedule.description.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

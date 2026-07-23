@@ -151,9 +151,89 @@ Comparing these files between humans and AI IS the research project.
 - Morale system
 - **Virus evolution "skill tree"**: scenario files that change how the outbreak behaves
   each run (random starts, weights, virus behavior) — great for the "vary what the AI is
-  trained on" research question
+  trained on" research question **→ NOW IMPLEMENTED as CSV scenario system, see §12**
 - Varying AI-partner assistance / information given to the player
 - Partial information (player only sees some cells' details clearly)
 
+## 12. CSV scenario system — virus evolution & environment data
+
+Each game run loads two CSV files from `data/` that replace hardcoded randomness with
+deterministic, shareable, tuneable data. A procedural generator (`scenario_generator.gd`)
+creates new random scenarios on demand. The game falls back to random generation if
+CSV files are missing.
+
+### 12a. Scenario CSV (`data/<id>.csv`)
+
+Per-cell environment configuration. One row per cell (25 rows for 5×5 grid):
+
+```
+x,y,population,origin,climate,terrain,wealth,pop_density
+0,0,85,0,temperate,urban,1.2,1.1
+0,1,75,0,temperate,suburban,0.8,0.9
+...
+```
+
+| Column | Type | Meaning |
+|---|---|---|
+| `x`, `y` | int | Cell coordinates (0–4) |
+| `population` | int | Starting healthy population. `0` for base cell or to trigger random fallback. |
+| `origin` | 0/1 | `1` = virus spawn cell (exactly one per file). Must not be the base (2,2). |
+| `climate` | string | Future-use tag: `temperate`, `tropical`, `arid`, `cold` |
+| `terrain` | string | Future-use tag: `urban`, `suburban`, `rural`, `industrial` |
+| `wealth` | float | Future-use income multiplier (~0.5–1.5) |
+| `pop_density` | float | Future-use population density modifier (~0.6–1.4) |
+
+### 12b. Virus schedule CSV (`data/<id>_virus_schedule.csv`)
+
+The virus's "skill tree" — timed upgrades that change outbreak behavior each run:
+
+```
+day,upgrade_type,value,target_x,target_y,description
+2,spread_boost,1.2,-1,-1,Virus adapts to local conditions
+5,infection_rate,0.35,-1,-1,Strain B emerges — faster conversion
+17,new_origin,-1,-1,-1,Virus migrates to most-infected cell
+25,mutation,1.8,-1,-1,Final evolutionary leap — all parameters boosted
+```
+
+| Upgrade type | Effect on game constants |
+|---|---|
+| `spread_boost` | Multiplies `active_spread_chance` by `value` (compounding) |
+| `infection_rate` | Replaces `active_convert_rate` with `value` |
+| `death_resistance` | Replaces `active_death_rate` with `value` (lower = virus survives longer) |
+| `new_origin` | Moves virus base to `(target_x, target_y)`, or most-infected cell if `-1` |
+| `mutation` | Multiplies all three rates by `value` (compounding) |
+| `extra_spread_amount` | Replaces `active_spread_amount` with `value` (int) |
+
+Upgrades apply at the **start** of each day (after day increments, before infection
+calculations). This means a day-5 upgrade is active during day 5's spread and growth.
+
+### 12c. Procedural generator
+
+`ScenarioGenerator` (static class in `scripts/core/scenario_generator.gd`) creates
+random CSVs:
+
+- `generate_scenario(id)` — random populations (50–150), random origin cell, random
+  climate/terrain/wealth/pop_density tags. Writes `data/<id>.csv`.
+- `generate_virus_schedule(id)` — 5–8 upgrades, escalating from mild (early) to
+  aggressive (late). Early-game: spread/infection boosts. Mid-game: + death resistance,
+  possible origin migration. Late-game: mutations, high multipliers. Writes
+  `data/<id>_virus_schedule.csv`.
+
+Call from GDScript: `ScenarioGenerator.generate_scenario("run_42")`
+Then update `game_manager.gd` to load `"res://data/run_42.csv"`.
+
+### 12d. Integration with game engine
+
+`game_manager.gd` loads scenarios in `_ready()`:
+1. `ScenarioLoader.load_scenario("res://data/sample_scenario.csv")` → populates
+   `cell_data` with populations, sets `zombie_cell` from origin column.
+2. `ScenarioLoader.load_virus_schedule("res://data/sample_virus_schedule.csv")` →
+   stores upgrades keyed by day.
+3. Mutable rate overrides (`active_convert_rate`, `active_spread_chance`, etc.)
+   are initialized from the base constants and modified by virus schedule events.
+4. `grow_infection()` and `spread_infection()` read the active rates, not the constants.
+
+If either CSV is missing, the game falls back to the original random behavior.
+
 ---
-*v2 — my proposal, everything's arguable. Comment and we'll tune it, then freeze. — Aydin*
+*v3 — CSV scenario system added (§12). — opencode*

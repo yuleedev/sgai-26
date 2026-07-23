@@ -1,0 +1,8 @@
+day,upgrade_type,value,target_x,target_y,description
+2,spread_boost,1.2,-1,-1,Virus adapts to local conditions
+5,infection_rate,0.35,-1,-1,Strain B emerges — faster conversion
+9,spread_boost,1.5,-1,-1,Enhanced airborne transmission
+13,death_resistance,0.03,-1,-1,Virus becomes harder to kill naturally
+17,new_origin,-1,-1,-1,Virus migrates to most-infected cell
+21,infection_rate,0.45,-1,-1,Strain C — aggressive conversion
+25,mutation,1.8,-1,-1,Final evolutionary leap — all parameters boosted

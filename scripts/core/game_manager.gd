@@ -51,10 +51,23 @@ var cell_data: Dictionary[Vector2i, Dictionary] = {}
 var hover_popup: PanelContainer
 var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
+var active_convert_rate := INFECT_CONVERT_RATE
+var active_spread_chance := SPREAD_CHANCE_PER_INFECTED
+var active_death_rate := INFECT_DEATH_RATE
+var active_spread_amount := SPREAD_INFECT_AMOUNT
+var virus_schedule: Dictionary = {}
 
 func _ready() -> void:
-	initialize_grid()
-	zombie_cell = random_outer_cell()
+	var scenario := ScenarioLoader.load_scenario("res://data/sample_scenario.csv")
+	if scenario.is_empty():
+		initialize_grid()
+		zombie_cell = random_outer_cell()
+	else:
+		initialize_grid_from_scenario(scenario)
+		zombie_cell = scenario.get("origin", random_outer_cell())
+		if not cell_data.has(zombie_cell) or zombie_cell == BASE_CELL:
+			zombie_cell = random_outer_cell()
+	virus_schedule = ScenarioLoader.load_virus_schedule("res://data/sample_virus_schedule.csv")
 	seed_infection(zombie_cell, STARTING_ZOMBIES)
 	update_all_cells()
 	set_player_cell()
@@ -84,6 +97,27 @@ func initialize_grid() -> void:
 		for y in range(GRID_SIZE):
 			var cell := Vector2i(x, y)
 			var population := 0 if cell == BASE_CELL else randi_range(MIN_POPULATION, MAX_POPULATION)
+			cell_data[cell] = {
+				"healthy": population,
+				"infected": 0,
+				"cured": 0,
+				"dead": 0,
+			}
+			grid.set_cell(cell, TILE_SOURCE_ID, COLOR_TILES[0])
+	center_grid()
+
+func initialize_grid_from_scenario(scenario: Dictionary) -> void:
+	cell_data.clear()
+	var cells: Dictionary = scenario.get("cells", {})
+	for x in range(GRID_SIZE):
+		for y in range(GRID_SIZE):
+			var cell := Vector2i(x, y)
+			var cell_info: Dictionary = cells.get(cell, {})
+			var population := 0
+			if cell != BASE_CELL:
+				population = cell_info.get("population", 0)
+				if population <= 0:
+					population = randi_range(MIN_POPULATION, MAX_POPULATION)
 			cell_data[cell] = {
 				"healthy": population,
 				"infected": 0,
@@ -149,13 +183,59 @@ func set_player_cell() -> void:
 func earn_money(amount: int) -> void:
 	money += amount
 
+func _migrate_origin_to_most_infected() -> void:
+	var max_infected := 0
+	var best_cell := zombie_cell
+	for cell in cell_data:
+		if cell == BASE_CELL:
+			continue
+		var infected: int = cell_data[cell]["infected"]
+		if infected > max_infected:
+			max_infected = infected
+			best_cell = cell
+	if max_infected > 0:
+		zombie_cell = best_cell
+
+func _update_origin_marker() -> void:
+	if origin_marker != null:
+		origin_marker.position = grid.position + Vector2(zombie_cell.x * TILE_PX, zombie_cell.y * TILE_PX)
+
+func apply_virus_upgrades() -> void:
+	if not virus_schedule.has(day):
+		return
+	for event in virus_schedule[day]:
+		var upgrade_type: String = event["upgrade_type"]
+		var value: float = event["value"]
+		match upgrade_type:
+			"spread_boost":
+				active_spread_chance *= value
+			"infection_rate":
+				active_convert_rate = value
+			"death_resistance":
+				active_death_rate = value
+			"new_origin":
+				if event["target_x"] >= 0 and event["target_y"] >= 0:
+					var new_origin := Vector2i(event["target_x"], event["target_y"])
+					if cell_data.has(new_origin) and new_origin != BASE_CELL:
+						zombie_cell = new_origin
+				else:
+					_migrate_origin_to_most_infected()
+			"mutation":
+				active_convert_rate *= value
+				active_spread_chance *= value
+				active_death_rate = maxf(active_death_rate / value, 0.005)
+			"extra_spread_amount":
+				active_spread_amount = int(value)
+	_update_origin_marker()
+
 func advance_day() -> void:
 	if day > MAX_DAYS:
 		return
+	day += 1
+	apply_virus_upgrades()
 	grow_infection()
 	spread_infection()
 	collect_income()
-	day += 1
 	update_all_cells()
 	refresh_status()
 
@@ -167,8 +247,8 @@ func grow_infection() -> void:
 		var infected: int = data["infected"]
 		if infected <= 0:
 			continue
-		var converted: int = min(int(floor(infected * INFECT_CONVERT_RATE)), data["healthy"])
-		var died: int = min(int(floor(infected * INFECT_DEATH_RATE)), infected)
+		var converted: int = min(int(floor(infected * active_convert_rate)), data["healthy"])
+		var died: int = min(int(floor(infected * active_death_rate)), infected)
 		data["healthy"] -= converted
 		data["infected"] += converted - died
 		data["dead"] += died
@@ -188,11 +268,11 @@ func spread_infection() -> void:
 			var target_data := cell_data[target]
 			var target_population: int = target_data["healthy"] + target_data["infected"] + target_data["cured"]
 			var chance: float = min(
-				infected * SPREAD_CHANCE_PER_INFECTED * (target_population / 100.0),
+				infected * active_spread_chance * (target_population / 100.0),
 				SPREAD_CHANCE_CAP,
 			)
 			if randf() < chance:
-				var appear: int = min(SPREAD_INFECT_AMOUNT, target_data["healthy"])
+				var appear: int = min(active_spread_amount, target_data["healthy"])
 				target_data["healthy"] -= appear
 				target_data["infected"] += appear
 
