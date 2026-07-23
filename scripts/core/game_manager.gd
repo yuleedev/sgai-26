@@ -1,5 +1,7 @@
 extends Node2D
 
+signal money_changed(new_amount: int)
+
 const GRID_SIZE := 5
 const STARTING_ZOMBIES := 20
 const ZOMBIE_LEVELS := 4
@@ -24,9 +26,9 @@ const NEIGHBOR_OFFSETS: Array[Vector2i] = [
 	Vector2i(1, 0),
 ]
 
-const TREAT_CURE_RATE := 0.20
-const CLEAR_KILL_RATE := 0.40
-const STARTING_DOSES := 10
+var treat_cure_rate: float = 0.20
+var clear_kill_rate: float = 0.40
+var max_doses: int = 10
 const TILE_PX := 200
 const TILE_SOURCE_ID := 0
 const COLOR_TILES: Array[Vector2i] =[
@@ -43,7 +45,10 @@ signal game_ended_signal(ending: String, people_lost: int, zombies_killed: int, 
 var money := 0
 var day := 1
 var skills: Dictionary = {}
-var doses := STARTING_DOSES
+var doses: int
+var spread_multiplier: float = 1.0
+var reinforced_clear_fee: int = 0
+var vaccine_unlock_day: int = 30
 var selected_cell := Vector2i(-1, -1)
 var original_population := 0  # sum of all 24 neighborhoods' starting population
 var total_zombies_cured := 0  # people actually treated by the player — NOT everyone who survived
@@ -65,10 +70,12 @@ var cell_data: Dictionary[Vector2i, Dictionary] = {}
 var hover_popup: PanelContainer
 var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
+var skill_tree_ref: CanvasLayer
 
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
 	ensure_log_headers()
+	doses = max_doses
 	initialize_grid()
 	zombie_cell = random_outer_cell()
 	seed_infection(zombie_cell, STARTING_ZOMBIES)
@@ -176,6 +183,8 @@ func set_player_cell() -> void:
 
 func earn_money(amount: int) -> void:
 	money += amount
+	money_changed.emit(money)
+	_update_skill_tree()
 
 func advance_day() -> void:
 	if game_ended:
@@ -325,7 +334,7 @@ func _on_treat_pressed() -> void:
 		set_last_action("No doses left")
 		return
 	var data := cell_data[selected_cell]
-	var cured: int = int(floor(data["infected"] * TREAT_CURE_RATE))
+	var cured: int = int(floor(data["infected"] * treat_cure_rate))
 	data["infected"] -= cured
 	data["cured"] += cured
 	doses -= 1
@@ -342,7 +351,7 @@ func _on_clear_pressed() -> void:
 		set_last_action("Select a neighborhood first")
 		return
 	var data := cell_data[selected_cell]
-	var killed: int = int(floor(data["infected"] * CLEAR_KILL_RATE))
+	var killed: int = int(floor(data["infected"] * clear_kill_rate))
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
@@ -372,13 +381,47 @@ func buy_skill(skill: String, cost: int) -> bool:
 	if money < cost:
 		return false
 	money -= cost
+	money_changed.emit(money)
+	_update_skill_tree()
 	skills[skill] = true
-	print("Purchased upgrade: ", skill, " | Money remaining: ", money)
+	match skill:
+		"better_treatment_1":
+			treat_cure_rate = 0.35
+		"better_treatment_2":
+			treat_cure_rate = 0.50
+		"extra_doses_1":
+			max_doses += 5
+			doses += 5
+		"extra_doses_2":
+			max_doses += 5
+			doses += 5
+		"reinforced_clear":
+			reinforced_clear_fee = 8
+		"rush_vaccine":
+			vaccine_unlock_day = 27
+		"quarantine":
+			spread_multiplier = 0.5
+	var skill_names := {
+		"better_treatment_1": "Better Treatment I",
+		"better_treatment_2": "Better Treatment II",
+		"extra_doses_1": "Extra Doses I",
+		"extra_doses_2": "Extra Doses II",
+		"reinforced_clear": "Reinforced Clear",
+		"rush_vaccine": "Rush Vaccine",
+		"quarantine": "Quarantine",
+	}
+	set_last_action("Purchased " + skill_names.get(skill, skill))
 	return true
 
 func _on_skills_pressed() -> void:
 	var tree := preload("res://scenes/skill_tree.tscn").instantiate()
+	skill_tree_ref = tree
 	add_child(tree)
+	tree.update_ui()
+
+func _update_skill_tree() -> void:
+	if skill_tree_ref != null and is_instance_valid(skill_tree_ref):
+		skill_tree_ref.update_ui()
 
 func create_day_controls() -> void:
 	status_label = Label.new()
