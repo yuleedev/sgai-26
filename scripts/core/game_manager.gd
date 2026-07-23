@@ -5,6 +5,7 @@ signal money_changed(new_amount: int)
 const GRID_SIZE := 5
 const STARTING_ZOMBIES := 20
 const ZOMBIE_LEVELS := 4
+const INFECTED_LEVEL_THRESHOLDS: Array[int] = [1, 25, 50]
 const MIN_POPULATION := 50
 const MAX_POPULATION := 150
 const BASE_CELL := Vector2i(2, 2)
@@ -240,11 +241,10 @@ func get_infected(cell: Vector2i) -> int:
 func get_zombie_level(cell: Vector2i) -> int:
 	var data: Dictionary = cell_data.get(cell, {})
 	var infected: int = data.get("infected", 0)
-	var population: int = data.get("healthy", 0) + infected + data.get("cured", 0)
-	if population <= 0:
-		return 0
-	var fraction := float(infected) / population
-	var level := roundi(fraction * (ZOMBIE_LEVELS - 1))
+	var level := 0
+	for threshold in INFECTED_LEVEL_THRESHOLDS:
+		if infected >= threshold:
+			level += 1
 	return clampi(level, 0, ZOMBIE_LEVELS - 1)
 
 func update_all_cells() -> void:
