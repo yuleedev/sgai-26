@@ -76,6 +76,13 @@ var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
 var skill_tree_ref: CanvasLayer
 
+var total_people_lost: int = 0
+var total_zombies_killed: int = 0
+var total_zombies_cured: int = 0
+var game_ended := false
+@export_file("*.tscn")
+var end_screen_path := "res://scenes/end_screen.tscn"
+
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
 	ensure_log_headers()
@@ -275,6 +282,10 @@ func advance_day() -> void:
 	log_day_row()
 	day += 1
 	update_all_cells()
+	if day >= MAX_DAYS:
+		end_game()
+		return
+	day += 1
 	refresh_status()
 	check_ending()
 
@@ -354,6 +365,15 @@ func finish_game(people_lost: int) -> void:
 	refresh_status()
 	game_ended_signal.emit(ending_result, people_lost, total_zombies_killed, total_zombies_cured, original_population)
 
+func end_game() -> void:
+	if game_ended:
+		return
+	game_ended = true
+	GameResults.people_lost = total_people_lost
+	GameResults.zombies_killed = total_zombies_killed
+	GameResults.zombies_cured = total_zombies_cured
+	get_tree().change_scene_to_file(end_screen_path)
+
 func grow_infection() -> void:
 	for cell in cell_data:
 		if cell == BASE_CELL:
@@ -371,6 +391,7 @@ func grow_infection() -> void:
 		data["healthy"] -= converted
 		data["infected"] += converted - died
 		data["dead"] += died
+		total_people_lost += died
 
 func spread_infection() -> void:
 	var source_infected: Dictionary[Vector2i, int] = {}
@@ -417,6 +438,7 @@ func _on_treat_pressed() -> void:
 	var cured: int = int(floor(data["infected"] * treat_cure_rate))
 	data["infected"] -= cured
 	data["cured"] += cured
+	total_zombies_cured += cured
 	doses -= 1
 	total_zombies_cured += cured
 	last_action_type = "TREAT"
@@ -677,6 +699,8 @@ func _style_hud_button(btn: Button, accent: Color) -> void:
 	btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.4, 0.42))
 
 func _unhandled_input(event: InputEvent) -> void:
+	if game_ended:
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var cell := grid.local_to_map(grid.to_local(get_global_mouse_position()))
 		if cell_data.has(cell) and cell != BASE_CELL:

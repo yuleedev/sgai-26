@@ -1,0 +1,191 @@
+[gd_scene format=3 uid="uid://cubrwbqypti5b"]
+
+[ext_resource type="Script" uid="uid://rwqxrsgjvwlb" path="res://scripts/ui/end_screen.gd" id="1_t3chd"]
+[ext_resource type="Texture2D" uid="uid://bjbrdeagw3nfi" path="res://assets/start screen/background.png" id="2_22ape"]
+[ext_resource type="Texture2D" uid="uid://bsh6tbn6n3jbd" path="res://assets/end screen/hover try again button.png" id="3_22ape"]
+[ext_resource type="Texture2D" uid="uid://bpg3s6dc00qnk" path="res://assets/start screen/fog.png" id="3_oy4mr"]
+[ext_resource type="Texture2D" uid="uid://bg63t5ukncrjl" path="res://assets/start screen/left hand.PNG" id="4_wledr"]
+[ext_resource type="Texture2D" uid="uid://cmsowwwabjdrl" path="res://assets/start screen/right hand.PNG" id="5_goktl"]
+[ext_resource type="Texture2D" uid="uid://clmdh3vblq215" path="res://assets/end screen/title.png" id="6_t3chd"]
+[ext_resource type="Texture2D" uid="uid://bkaj3dhyg3ahg" path="res://assets/start screen/fingers.PNG" id="7_016ls"]
+[ext_resource type="Texture2D" uid="uid://cytag7rfxmj2e" path="res://assets/end screen/normal try again button.png" id="8_22ape"]
+[ext_resource type="Texture2D" uid="uid://b33w2fon5ncp0" path="res://assets/start screen/press start button.PNG" id="9_hxk3r"]
+[ext_resource type="Texture2D" uid="uid://dfi7b1h0j5h3m" path="res://assets/start screen/1.PNG" id="10_17b70"]
+[ext_resource type="Texture2D" uid="uid://bf688do8otdk" path="res://assets/start screen/2.PNG" id="11_aosfm"]
+[ext_resource type="Texture2D" uid="uid://cgpbui5tdu0u4" path="res://assets/start screen/3.PNG" id="12_clebu"]
+[ext_resource type="Texture2D" uid="uid://chqpib4aelugd" path="res://assets/start screen/4.PNG" id="13_yyvlx"]
+[ext_resource type="Texture2D" uid="uid://bgahgu6g2o2pm" path="res://assets/start screen/5.PNG" id="14_2pnep"]
+[ext_resource type="Texture2D" uid="uid://bv5xaxdi0nuyv" path="res://assets/start screen/6.PNG" id="15_eer74"]
+[ext_resource type="Texture2D" uid="uid://bob7ccep07bh3" path="res://assets/start screen/7.PNG" id="16_bh4bk"]
+[ext_resource type="Texture2D" uid="uid://di31uoiemcmxq" path="res://assets/start screen/8.PNG" id="17_y8dw3"]
+[ext_resource type="Texture2D" uid="uid://7jcntbmdwrqo" path="res://assets/start screen/9.PNG" id="18_j3f4a"]
+[ext_resource type="Texture2D" uid="uid://dd1705hwou88l" path="res://assets/start screen/10.PNG" id="19_bf2dx"]
+[ext_resource type="AudioStream" uid="uid://c3fisaxxpnjlw" path="res://assets/audio/start_game.mp3" id="20_2a1eq"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_f4i33"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_oljci"]
+
+[node name="EndScene" type="Control" unique_id=1367247054]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_t3chd")
+try_again_normal_texture = ExtResource("8_22ape")
+try_again_hover_texture = ExtResource("3_22ape")
+try_again_pressed_texture = ExtResource("9_hxk3r")
+
+[node name="Background" type="TextureRect" parent="." unique_id=1483856364]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("2_22ape")
+
+[node name="Fog" type="TextureRect" parent="." unique_id=854672791]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("3_oy4mr")
+
+[node name="LeftHand" type="TextureRect" parent="." unique_id=1865823490]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -167.0
+offset_right = 1922.0
+offset_bottom = 913.0
+texture = ExtResource("4_wledr")
+
+[node name="RightHand" type="TextureRect" parent="." unique_id=239440024]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -167.0
+offset_right = 1922.0
+offset_bottom = 913.0
+texture = ExtResource("5_goktl")
+
+[node name="Title" type="TextureRect" parent="." unique_id=1448174110]
+layout_mode = 0
+offset_top = -80.0
+offset_right = 1920.0
+offset_bottom = 1000.0
+texture = ExtResource("6_t3chd")
+
+[node name="Fingers" type="TextureRect" parent="." unique_id=804362847]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -167.0
+offset_right = 1922.0
+offset_bottom = 913.0
+texture = ExtResource("7_016ls")
+
+[node name="TryAgainArt" type="TextureRect" parent="." unique_id=397242555]
+layout_mode = 0
+offset_left = 2.0
+offset_top = 8.0
+offset_right = 1922.0
+offset_bottom = 1088.0
+texture = ExtResource("8_22ape")
+
+[node name="RevealMask" type="TextureRect" parent="." unique_id=14041279]
+clip_children = 1
+layout_mode = 0
+offset_top = 8.0
+offset_right = 1920.0
+offset_bottom = 1088.0
+texture = ExtResource("9_hxk3r")
+
+[node name="1" type="TextureRect" parent="RevealMask" unique_id=1724771267]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("10_17b70")
+
+[node name="2" type="TextureRect" parent="RevealMask" unique_id=471019808]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("11_aosfm")
+
+[node name="3" type="TextureRect" parent="RevealMask" unique_id=1179641752]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("12_clebu")
+
+[node name="4" type="TextureRect" parent="RevealMask" unique_id=1617073859]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("13_yyvlx")
+
+[node name="5" type="TextureRect" parent="RevealMask" unique_id=1422788590]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("14_2pnep")
+
+[node name="6" type="TextureRect" parent="RevealMask" unique_id=2113539126]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("15_eer74")
+
+[node name="7" type="TextureRect" parent="RevealMask" unique_id=1130415179]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("16_bh4bk")
+
+[node name="8" type="TextureRect" parent="RevealMask" unique_id=258106089]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("17_y8dw3")
+
+[node name="9" type="TextureRect" parent="RevealMask" unique_id=880806348]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("18_j3f4a")
+
+[node name="10" type="TextureRect" parent="RevealMask" unique_id=397717554]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+texture = ExtResource("19_bf2dx")
+
+[node name="PeopleLost" type="Label" parent="." unique_id=1587325794]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZombiesKilled" type="Label" parent="." unique_id=858340068]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="ZombiesCured" type="Label" parent="." unique_id=1534431205]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="FadeOverlay" type="ColorRect" parent="." unique_id=273133660]
+visible = false
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0, 0, 0, 1)
+
+[node name="TryAgainButton" type="Button" parent="." unique_id=1552839560]
+layout_mode = 0
+offset_left = 592.3453
+offset_top = 773.85
+offset_right = 1334.9507
+offset_bottom = 965.85
+rotation = -0.104727104
+theme_override_styles/normal = SubResource("StyleBoxEmpty_f4i33")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_oljci")
+
+[node name="StartGameSound" type="AudioStreamPlayer" parent="." unique_id=1712347803]
+stream = ExtResource("20_2a1eq")
+volume_db = -25.0
+pitch_scale = 0.8
