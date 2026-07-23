@@ -109,17 +109,17 @@ func _make_ui_font() -> Font:
 	return load("res://assets/Play-Regular.ttf")
 
 func _apply_theme() -> void:
-	bg_overlay.color = Color(0.06, 0.02, 0.02, 0.85)
+	bg_overlay.color = Color(0.03, 0.035, 0.045, 0.82)
 
 	var panel_bg := StyleBoxFlat.new()
-	panel_bg.bg_color = Color(0.09, 0.09, 0.10)
+	panel_bg.bg_color = Color(0.13, 0.14, 0.16)
 	panel_bg.set_corner_radius_all(8)
 	panel_bg.corner_detail = 8
-	panel_bg.border_width_left = 2
-	panel_bg.border_width_right = 2
-	panel_bg.border_width_top = 2
-	panel_bg.border_width_bottom = 2
-	panel_bg.border_color = Color(0.25, 0.05, 0.05)
+	panel_bg.border_width_left = 1
+	panel_bg.border_width_right = 1
+	panel_bg.border_width_top = 1
+	panel_bg.border_width_bottom = 1
+	panel_bg.border_color = Color(0.24, 0.26, 0.30)
 	panel_bg.content_margin_left = 32
 	panel_bg.content_margin_right = 32
 	panel_bg.content_margin_top = 26
@@ -198,7 +198,7 @@ func _style_dark_button(btn: Button) -> void:
 	normal.border_width_right = 1
 	normal.border_width_top = 1
 	normal.border_width_bottom = 1
-	normal.border_color = Color(0.35, 0.08, 0.08)
+	normal.border_color = Color(0.26, 0.28, 0.32)
 	normal.content_margin_left = 12
 	normal.content_margin_right = 12
 	normal.content_margin_top = 4
@@ -207,14 +207,14 @@ func _style_dark_button(btn: Button) -> void:
 	btn.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 
 	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(0.25, 0.1, 0.1)
+	hover.bg_color = Color(0.20, 0.22, 0.26)
 	hover.set_corner_radius_all(4)
 	hover.corner_detail = 6
 	hover.border_width_left = 1
 	hover.border_width_right = 1
 	hover.border_width_top = 1
 	hover.border_width_bottom = 1
-	hover.border_color = Color(0.5, 0.12, 0.12)
+	hover.border_color = Color(0.34, 0.37, 0.42)
 	hover.content_margin_left = 12
 	hover.content_margin_right = 12
 	hover.content_margin_top = 4
@@ -223,14 +223,14 @@ func _style_dark_button(btn: Button) -> void:
 	btn.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0))
 
 	var pressed := StyleBoxFlat.new()
-	pressed.bg_color = Color(0.1, 0.05, 0.05)
+	pressed.bg_color = Color(0.09, 0.10, 0.12)
 	pressed.set_corner_radius_all(4)
 	pressed.corner_detail = 6
 	pressed.border_width_left = 1
 	pressed.border_width_right = 1
 	pressed.border_width_top = 1
 	pressed.border_width_bottom = 1
-	pressed.border_color = Color(0.3, 0.05, 0.05)
+	pressed.border_color = Color(0.2, 0.22, 0.26)
 	pressed.content_margin_left = 12
 	pressed.content_margin_right = 12
 	pressed.content_margin_top = 4
@@ -420,7 +420,7 @@ func _on_visual_tree_draw() -> void:
 		elif gm.has_skill(conn[0]):
 			color = Color(0.5, 0.85, 0.5, 0.5)
 		else:
-			color = Color(0.3, 0.2, 0.2, 0.5)
+			color = Color(0.28, 0.30, 0.34, 0.5)
 
 		visual_tree.draw_line(from_pos, to_pos, color, 4.0, true)
 
