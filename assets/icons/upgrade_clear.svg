@@ -1,0 +1,19 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="skullCuts">
+      <rect x="0" y="0" width="64" height="64" fill="#ffffff"/>
+      <circle cx="24.5" cy="27" r="5.5" fill="#000000"/>
+      <circle cx="39.5" cy="27" r="5.5" fill="#000000"/>
+      <path d="M32 32l-3.5 6h7z" fill="#000000"/>
+      <rect x="20" y="47" width="4" height="5" fill="#000000"/>
+      <rect x="28" y="49" width="4" height="6" fill="#000000"/>
+      <rect x="36" y="49" width="4" height="6" fill="#000000"/>
+      <rect x="44" y="47" width="4" height="5" fill="#000000"/>
+    </mask>
+  </defs>
+  <g transform="translate(8, 8) scale(0.75)">
+    <g fill="#ffffff" mask="url(#skullCuts)">
+      <path d="M32 6C19.85 6 10 15.85 10 28c0 8.1 4.36 15.16 10.86 19V52a3 3 0 0 0 3 3h3v4a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-4h3a3 3 0 0 0 3-3v-5c6.5-3.84 10.14-10.9 10.14-19C54 15.85 44.15 6 32 6z"/>
+    </g>
+  </g>
+</svg>

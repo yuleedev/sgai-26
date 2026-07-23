@@ -2,12 +2,12 @@ extends CanvasLayer
 
 @onready var money_label: Label = %MoneyLabel
 @onready var close_button: Button = %CloseButton
-@onready var earn_button: Button = %EarnButton
+
 @onready var visual_tree: Control = %VisualTree
 @onready var detail_panel: VBoxContainer = %DetailPanel
 @onready var detail_hint: Label = %DetailHint
 @onready var detail_content: VBoxContainer = %DetailContent
-@onready var detail_icon: Label = %DetailIcon
+@onready var detail_icon: TextureRect = %DetailIcon
 @onready var detail_name: Label = %DetailName
 @onready var detail_desc: Label = %DetailDesc
 @onready var detail_cost: Label = %DetailCost
@@ -19,70 +19,70 @@ extends CanvasLayer
 var _bangers: FontFile
 
 const SKILLS := [
-	{
-		key = "better_treatment_1",
-		name = "Better Treatment I",
-		desc = "Treat 20% → 35%",
-		cost = 50000,
-		letter = "T1",
-		pos = Vector2(40, 140),
-		prereqs = [],
-	},
-	{
-		key = "better_treatment_2",
-		name = "Better Treatment II",
-		desc = "Treat 35% → 50%",
-		cost = 100000,
-		letter = "T2",
-		pos = Vector2(40, 340),
-		prereqs = ["better_treatment_1"],
-	},
-	{
-		key = "extra_doses_1",
-		name = "Extra Doses I",
-		desc = "+5 doses",
-		cost = 40000,
-		letter = "D1",
-		pos = Vector2(170, 140),
-		prereqs = [],
-	},
-	{
-		key = "extra_doses_2",
-		name = "Extra Doses II",
-		desc = "+5 more",
-		cost = 70000,
-		letter = "D2",
-		pos = Vector2(170, 340),
-		prereqs = ["extra_doses_1"],
-	},
-	{
-		key = "reinforced_clear",
-		name = "Reinforced Clear",
-		desc = "Unlock paid Clear (55% kill for $8K)",
-		cost = 50000,
-		letter = "RC",
-		pos = Vector2(300, 140),
-		prereqs = [],
-	},
-	{
-		key = "rush_vaccine",
-		name = "Rush Vaccine",
-		desc = "Vaccine unlocked at day 27",
-		cost = 80000,
-		letter = "RV",
-		pos = Vector2(430, 140),
-		prereqs = [],
-	},
-	{
-		key = "quarantine",
-		name = "Quarantine",
-		desc = "All spread chances halved",
-		cost = 110000,
-		letter = "Q",
-		pos = Vector2(560, 140),
-		prereqs = [],
-	},
-]
+		{
+			key = "better_treatment_1",
+			name = "Better Treatment I",
+			desc = "Treat 20% → 35%",
+			cost = 90,
+			icon_path = "res://assets/icons/upgrade_treatment.svg",
+			pos = Vector2(40, 140),
+			prereqs = [],
+		},
+		{
+			key = "better_treatment_2",
+			name = "Better Treatment II",
+			desc = "Treat 35% → 50%",
+			cost = 160,
+			icon_path = "res://assets/icons/upgrade_treatment.svg",
+			pos = Vector2(40, 340),
+			prereqs = ["better_treatment_1"],
+		},
+		{
+			key = "extra_doses_1",
+			name = "Extra Doses I",
+			desc = "+5 doses",
+			cost = 70,
+			icon_path = "res://assets/icons/upgrade_doses.svg",
+			pos = Vector2(170, 140),
+			prereqs = [],
+		},
+		{
+			key = "extra_doses_2",
+			name = "Extra Doses II",
+			desc = "+5 more",
+			cost = 120,
+			icon_path = "res://assets/icons/upgrade_doses.svg",
+			pos = Vector2(170, 340),
+			prereqs = ["extra_doses_1"],
+		},
+		{
+			key = "reinforced_clear",
+			name = "Reinforced Clear",
+			desc = "Unlock paid Clear (55% kill for $8K)",
+			cost = 50,
+			icon_path = "res://assets/icons/upgrade_clear.svg",
+			pos = Vector2(300, 140),
+			prereqs = [],
+		},
+		{
+			key = "rush_vaccine",
+			name = "Rush Vaccine",
+			desc = "Vaccine unlocked at day 27",
+			cost = 140,
+			icon_path = "res://assets/icons/upgrade_vaccine.svg",
+			pos = Vector2(430, 140),
+			prereqs = [],
+		},
+		{
+			key = "quarantine",
+			name = "Quarantine",
+			desc = "All spread chances halved",
+			cost = 220,
+			icon_path = "res://assets/icons/upgrade_quarantine.svg",
+			pos = Vector2(560, 140),
+			prereqs = [],
+		},
+	]
 
 const CONNECTIONS := [
 	["better_treatment_1", "better_treatment_2"],
@@ -101,7 +101,6 @@ func _ready() -> void:
 	build_visual_tree()
 	visual_tree.draw.connect(_on_visual_tree_draw)
 	close_button.pressed.connect(_on_close_pressed)
-	earn_button.pressed.connect(_on_earn_pressed)
 	detail_buy_button.pressed.connect(_on_detail_buy_pressed)
 	hide_details()
 
@@ -159,23 +158,9 @@ func _apply_theme() -> void:
 	close_button.add_theme_font_override("font", _bangers)
 	close_button.add_theme_font_size_override("font_size", 18)
 
-	earn_button.add_theme_font_override("font", _bangers)
-	earn_button.add_theme_font_size_override("font_size", 14)
-	earn_button.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-
 	_style_dark_button(detail_buy_button)
 	_style_dark_button(close_button)
 
-	var earn_sb := StyleBoxFlat.new()
-	earn_sb.bg_color = Color(0.12, 0.12, 0.12)
-	earn_sb.set_corner_radius_all(4)
-	earn_sb.corner_detail = 6
-	earn_sb.border_width_left = 1
-	earn_sb.border_width_right = 1
-	earn_sb.border_width_top = 1
-	earn_sb.border_width_bottom = 1
-	earn_sb.border_color = Color(0.2, 0.2, 0.2)
-	earn_button.add_theme_stylebox_override("normal", earn_sb)
 
 func _style_dark_button(btn: Button) -> void:
 	var normal := StyleBoxFlat.new()
@@ -251,7 +236,7 @@ func show_details(key: String) -> void:
 	detail_hint.visible = false
 	detail_content.visible = true
 
-	detail_icon.text = skill.letter
+	detail_icon.texture = load(skill.icon_path)
 	detail_name.text = skill.name
 	detail_desc.text = skill.desc
 
@@ -264,8 +249,6 @@ func show_details(key: String) -> void:
 	sb.content_margin_bottom = 0
 	sb.bg_color = _get_node_color(key)
 	detail_icon.add_theme_stylebox_override("normal", sb)
-	detail_icon.add_theme_font_override("font", _bangers)
-	detail_icon.add_theme_font_size_override("font_size", 24)
 
 	var gm = get_parent()
 	if gm.has_skill(key):
@@ -312,8 +295,8 @@ func _can_buy(key: String) -> bool:
 
 func _format_money(amount: int) -> String:
 	if amount == 0:
-		return "$0"
-	return "$" + str(amount / 1000) + "K"
+		return "$0k"
+	return "$" + str(amount) + "k"
 
 func _get_node_color(key: String) -> Color:
 	var gm = get_parent()
@@ -327,7 +310,8 @@ func _get_node_color(key: String) -> Color:
 func build_visual_tree() -> void:
 	for skill in SKILLS:
 		var btn := Button.new()
-		btn.text = skill.letter
+		btn.icon = load(skill.icon_path)
+		btn.expand_icon = true
 		btn.custom_minimum_size = Vector2(NODE_SIZE, NODE_SIZE)
 		btn.size = Vector2(NODE_SIZE, NODE_SIZE)
 		btn.position = skill.pos - Vector2(NODE_RADIUS, NODE_RADIUS)
@@ -371,10 +355,6 @@ func build_visual_tree() -> void:
 		sb_disabled.content_margin_bottom = 0
 		btn.add_theme_stylebox_override("disabled", sb_disabled)
 
-		btn.add_theme_font_override("font", _bangers)
-		btn.add_theme_font_size_override("font_size", 22)
-		btn.add_theme_color_override("font_color", Color.WHITE)
-
 		upgrade_buttons[skill.key] = btn
 		visual_tree.add_child(btn)
 
@@ -417,6 +397,8 @@ func update_node_colors() -> void:
 	for skill in SKILLS:
 		var btn = upgrade_buttons[skill.key]
 		var color = _get_node_color(skill.key)
+		var is_locked = not (gm.has_skill(skill.key) or _can_buy(skill.key) or _prereqs_met(skill.key))
+		btn.modulate = Color(0.5, 0.5, 0.5, 0.6) if is_locked else Color.WHITE
 		var has_border: bool = gm.has_skill(skill.key) or _can_buy(skill.key)
 
 		for state in ["normal", "hover", "pressed", "disabled"]:
@@ -466,13 +448,10 @@ func _on_detail_buy_pressed() -> void:
 		if gm.has_method("refresh_status"):
 			gm.refresh_status()
 
-func _on_earn_pressed() -> void:
-	var gm = get_parent()
-	gm.earn_money(10000)
-	update_ui()
-
 func _on_close_pressed() -> void:
 	var gm = get_parent()
-	if gm.has_method("refresh_status"):
-		gm.refresh_status()
+	if gm != null:
+		gm.skill_tree_ref = null
+		if gm.has_method("refresh_status"):
+			gm.refresh_status()
 	queue_free()

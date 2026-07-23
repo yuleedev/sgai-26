@@ -44,9 +44,6 @@ unique_name_in_owner = true
 text = "Money: $0"
 horizontal_alignment = 2
 
-[node name="EarnButton" type="Button" parent="Panel/MainVBox/Header"]
-unique_name_in_owner = true
-text = "+$10K"
 
 [node name="ContentHBox" type="HBoxContainer" parent="Panel/MainVBox"]
 size_flags_vertical = 3
@@ -69,13 +66,12 @@ unique_name_in_owner = true
 visible = false
 size_flags_vertical = 3
 
-[node name="DetailIcon" type="Label" parent="Panel/MainVBox/ContentHBox/DetailPanel/DetailContent"]
+[node name="DetailIcon" type="TextureRect" parent="Panel/MainVBox/ContentHBox/DetailPanel/DetailContent"]
 unique_name_in_owner = true
-text = "?"
-horizontal_alignment = 1
-vertical_alignment = 1
 custom_minimum_size = Vector2(56, 56)
 size_flags_horizontal = 4
+expand_mode = 1
+stretch_mode = 0
 
 [node name="DetailName" type="Label" parent="Panel/MainVBox/ContentHBox/DetailPanel/DetailContent"]
 unique_name_in_owner = true

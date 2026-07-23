@@ -1,0 +1,16 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(8, 8) scale(0.75)">
+    <g fill="#ffffff" stroke="#ffffff" stroke-linecap="round">
+      <line x1="6" y1="20" x2="20" y2="20" stroke-width="4" opacity="0.35"/>
+      <line x1="10" y1="30" x2="26" y2="30" stroke-width="4.5" opacity="0.6"/>
+      <line x1="6" y1="40" x2="20" y2="40" stroke-width="4" opacity="0.35"/>
+    </g>
+    <g fill="#ffffff">
+      <rect x="35" y="4" width="12" height="7" rx="2"/>
+      <rect x="39" y="11" width="4" height="8"/>
+      <rect x="30" y="19" width="16" height="22" rx="3.5"/>
+      <rect x="39.3" y="41" width="3.4" height="13"/>
+      <path d="M39.3 54h3.4l-1.7 6z"/>
+    </g>
+  </g>
+</svg>

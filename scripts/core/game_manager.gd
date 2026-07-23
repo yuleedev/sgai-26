@@ -1,5 +1,7 @@
 extends Node2D
 
+signal money_changed(new_amount: int)
+
 const GRID_SIZE := 5
 const STARTING_ZOMBIES := 20
 const ZOMBIE_LEVELS := 4
@@ -54,6 +56,7 @@ var cell_data: Dictionary[Vector2i, Dictionary] = {}
 var hover_popup: PanelContainer
 var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
+var skill_tree_ref: CanvasLayer
 
 func _ready() -> void:
 	doses = max_doses
@@ -152,6 +155,8 @@ func set_player_cell() -> void:
 
 func earn_money(amount: int) -> void:
 	money += amount
+	money_changed.emit(money)
+	_update_skill_tree()
 
 func advance_day() -> void:
 	if day > MAX_DAYS:
@@ -258,6 +263,8 @@ func buy_skill(skill: String, cost: int) -> bool:
 	if money < cost:
 		return false
 	money -= cost
+	money_changed.emit(money)
+	_update_skill_tree()
 	skills[skill] = true
 	match skill:
 		"better_treatment_1":
@@ -271,7 +278,7 @@ func buy_skill(skill: String, cost: int) -> bool:
 			max_doses += 5
 			doses += 5
 		"reinforced_clear":
-			reinforced_clear_fee = 8000
+			reinforced_clear_fee = 8
 		"rush_vaccine":
 			vaccine_unlock_day = 27
 		"quarantine":
@@ -290,7 +297,13 @@ func buy_skill(skill: String, cost: int) -> bool:
 
 func _on_skills_pressed() -> void:
 	var tree := preload("res://scenes/skill_tree.tscn").instantiate()
+	skill_tree_ref = tree
 	add_child(tree)
+	tree.update_ui()
+
+func _update_skill_tree() -> void:
+	if skill_tree_ref != null and is_instance_valid(skill_tree_ref):
+		skill_tree_ref.update_ui()
 
 func create_day_controls() -> void:
 	status_label = Label.new()
