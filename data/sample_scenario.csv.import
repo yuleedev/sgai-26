@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cb457xlq2731v"
+
+[deps]
+
+files=["res://data/sample_scenario.y.translation", "res://data/sample_scenario.population.translation", "res://data/sample_scenario.origin.translation", "res://data/sample_scenario.climate.translation", "res://data/sample_scenario.terrain.translation", "res://data/sample_scenario.wealth.translation", "res://data/sample_scenario.pop.translation"]
+
+source_file="res://data/sample_scenario.csv"
+dest_files=["res://data/sample_scenario.y.translation", "res://data/sample_scenario.population.translation", "res://data/sample_scenario.origin.translation", "res://data/sample_scenario.climate.translation", "res://data/sample_scenario.terrain.translation", "res://data/sample_scenario.wealth.translation", "res://data/sample_scenario.pop.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
