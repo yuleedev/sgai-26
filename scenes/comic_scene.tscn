@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://b55yw5tda4gk8"]
 
-[ext_resource type="Texture2D" uid="uid://6d8dy7q81fy7" path="res://assets/full comic.PNG" id="1_4h1eo"]
+[ext_resource type="Texture2D" uid="uid://b4alikyinpod0" path="res://assets/comic_1.png" id="1_4h1eo"]
 [ext_resource type="Script" uid="uid://dtw1wsktad814" path="res://scripts/ui/comic_scene.gd" id="1_4oiw7"]
 
 [node name="ComicScene" type="Node2D"]
