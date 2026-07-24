@@ -901,7 +901,7 @@ func start_tutorial() -> void:
 	tutorial_ref = tutorial
 
 func _should_show_tutorial() -> bool:
-	return true  # TODO: revert to `not FileAccess.file_exists(TUTORIAL_FLAG_PATH)` before shipping
+	return not FileAccess.file_exists(TUTORIAL_FLAG_PATH)
 
 func _on_tutorial_finished() -> void:
 	tutorial_ref = null
