@@ -867,33 +867,33 @@ func start_tutorial() -> void:
 	tutorial.setup([
 		{
 			"title": "Welcome, Doctor",
-			"body": "This is the city. Each tile is a neighborhood with its own population. The outbreak began at the ORIGIN tile and spreads to neighbors every day.",
+			"body": "A zombie virus has broken out in the city, and you lead the response from the hospital at its center. Each tile is a neighborhood with its own population. The outbreak began at the ORIGIN tile and spreads to neighboring tiles every day — your job is to keep people alive until the vaccine is ready.",
 			"rect": grid_rect,
 		},
 		{
-			"title": "Pick a target",
-			"body": "Go ahead — click any tile to select it. Hover over a tile to see its healthy, infected, cured, and dead counts.",
+			"title": "Read the map",
+			"body": "Tile color shows the danger at a glance: green means healthy, red means the neighborhood is overrun. Click any tile to select it, and hover over one to see its healthy, infected, cured, and dead counts. Go ahead — select a tile to continue.",
 			"rect": grid_rect,
 			"interactive": true,
 		},
 		{
-			"title": "Watch your resources",
-			"body": "Track the current DAY against the vaccine deadline, your FUNDING, and how many DOSES you have left.",
+			"title": "Track your resources",
+			"body": "Three numbers decide how much you can do each day. DAY counts up to the vaccine deadline, FUNDING is the cash healthy neighborhoods bring in to spend on upgrades, and DOSES are your limited charges for treating the infected.",
 			"target": status_panel,
 		},
 		{
 			"title": "Take action",
-			"body": "With a tile selected: TREAT spends a dose to cure infected, CLEAR kills infected, and WAIT passes the day. Every action advances one day.",
+			"body": "Select a tile first, then choose a move — every action advances the day. TREAT spends a dose to cure a share of the infected, CLEAR kills a share fast but the dead cannot be brought back, and WAIT passes the day while the virus keeps spreading.",
 			"target": action_panel,
 		},
 		{
-			"title": "Upgrade over time",
-			"body": "Open the Skill Tree to spend funding on upgrades like stronger treatment, extra doses, and quarantine.",
+			"title": "Spend on upgrades",
+			"body": "Open the Skill Tree to turn funding into an edge — strengthen your treatment, stock extra doses, set up quarantine to slow the spread, or rush the vaccine to end the outbreak sooner.",
 			"target": skill_button_panel,
 		},
 		{
-			"title": "You're ready",
-			"body": "Slow the spread and keep neighborhoods alive until the vaccine arrives. Save at least half the city to win. Good luck.",
+			"title": "Win the race",
+			"body": "Every day the infection grows and reaches new neighborhoods. Decide where to treat and where to clear, watch your doses and funding, and hold the line until the vaccine. Save at least half the city to win — good luck.",
 		},
 	])
 	tutorial.finished.connect(_on_tutorial_finished)
@@ -901,7 +901,7 @@ func start_tutorial() -> void:
 	tutorial_ref = tutorial
 
 func _should_show_tutorial() -> bool:
-	return not FileAccess.file_exists(TUTORIAL_FLAG_PATH)
+	return true  # TODO: revert to `not FileAccess.file_exists(TUTORIAL_FLAG_PATH)` before shipping
 
 func _on_tutorial_finished() -> void:
 	tutorial_ref = null
