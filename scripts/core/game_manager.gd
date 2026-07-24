@@ -64,6 +64,7 @@ var day_value: Label
 var funding_value: Label
 var doses_value: Label
 var selected_value: Label
+var population_value: Label
 var hud_font: Font
 var treat_button: Button
 var clear_button: Button
@@ -620,6 +621,7 @@ func _build_status_panel() -> void:
 	funding_value = _add_stat_row(vbox, "FUNDING", Color(0.98, 0.78, 0.24))
 	doses_value = _add_stat_row(vbox, "DOSES", Color(0.55, 0.8, 1.0))
 	selected_value = _add_stat_row(vbox, "SELECTED", Color(0.85, 0.85, 0.88))
+	population_value = _add_stat_row(vbox, "POPULATION", Color(0.6, 0.88, 0.62))
 
 	action_label = Label.new()
 	action_label.add_theme_font_size_override("font_size", 22)
@@ -635,7 +637,7 @@ func _add_stat_row(parent: Node, label_text: String, value_color: Color) -> Labe
 
 	var name_label := Label.new()
 	name_label.text = label_text
-	name_label.custom_minimum_size = Vector2(130, 0)
+	name_label.custom_minimum_size = Vector2(150, 0)
 	if hud_font != null:
 		name_label.add_theme_font_override("font", hud_font)
 	name_label.add_theme_font_size_override("font_size", 22)
@@ -802,6 +804,13 @@ func create_origin_marker() -> void:
 	origin_marker.z_index = 4
 	add_child(origin_marker)
 
+func living_population() -> int:
+	var alive := 0
+	for cell in cell_data:
+		var d: Dictionary = cell_data[cell]
+		alive += d["healthy"] + d["infected"] + d["cured"]
+	return alive
+
 func refresh_status() -> void:
 	if day_value == null:
 		return
@@ -810,6 +819,7 @@ func refresh_status() -> void:
 	funding_value.text = "$%dk" % money
 	doses_value.text = "%d" % doses
 	selected_value.text = selection_text
+	population_value.text = "%d / %d" % [living_population(), original_population]
 	if treat_button != null:
 		treat_button.disabled = doses <= 0
 
@@ -845,9 +855,10 @@ func _process(_delta: float) -> void:
 	hover_popup.visible = true
 
 func build_hover_text(cell: Vector2i) -> String:
+	if cell == BASE_CELL:
+		return "[b]Base (Hospital)[/b]\n[color=#b0b0b0]No residents. Runs your response.[/color]"
 	var data := cell_data[cell]
-	var title := "Base (Hospital)" if cell == BASE_CELL else "Neighborhood (%d, %d)" % [cell.x, cell.y]
-	return "[b]%s[/b]\n" % title \
+	return "[b]Neighborhood (%d, %d)[/b]\n" % [cell.x, cell.y] \
 		+ "[color=#7ed957]Healthy[/color]: %d\n" % data["healthy"] \
 		+ "[color=#ff5b5b]Infected[/color]: %d\n" % data["infected"] \
 		+ "[color=#5b9bff]Cured[/color]: %d\n" % data["cured"] \
@@ -878,12 +889,12 @@ func start_tutorial() -> void:
 		},
 		{
 			"title": "Track your resources",
-			"body": "Three numbers decide how much you can do each day. DAY counts up to the vaccine deadline, FUNDING is the cash healthy neighborhoods bring in to spend on upgrades, and DOSES are your limited charges for treating the infected.",
+			"body": "Four numbers track the state of the city. DAY counts up to the vaccine deadline, FUNDING is the cash healthy neighborhoods bring in to spend on upgrades, DOSES are your limited charges for treating the infected, and POPULATION shows how many people are still living out of the city's starting total.",
 			"target": status_panel,
 		},
 		{
 			"title": "Take action",
-			"body": "Select a tile first, then choose a move. Every action advances the day. TREAT spends a dose to cure a share of the infected, CLEAR kills a share fast but the dead cannot be brought back, and WAIT passes the day while the virus keeps spreading.",
+			"body": "Select a tile first, then choose a move. Every action advances the day. TREAT spends a dose to cure a share of the infected, CLEAR kills a share fast but the dead cannot be brought back, and WAIT passes the day while the virus keeps spreading. The infection is fatal on its own: every day a neighborhood stays infected, about 5% of its infected die. Leaving a tile alone still costs lives.",
 			"target": action_panel,
 		},
 		{
