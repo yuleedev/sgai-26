@@ -96,6 +96,21 @@ func _ready() -> void:
 	create_day_controls()
 	create_origin_marker()
 	refresh_status()
+	fade_in()
+
+func fade_in() -> void:
+	# black overlay on top that fades out so the map eases in instead of popping
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	add_child(layer)
+	var overlay := ColorRect.new()
+	overlay.color = Color.BLACK
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(overlay)
+	var tween := create_tween()
+	tween.tween_property(overlay, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(layer.queue_free)
 
 func ensure_log_headers() -> void:
 	if not FileAccess.file_exists(LOG_PATH):
