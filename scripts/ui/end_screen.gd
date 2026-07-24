@@ -137,6 +137,7 @@ func _ready() -> void:
 	try_again_button.mouse_entered.connect(_on_try_again_button_mouse_entered)
 	try_again_button.mouse_exited.connect(_on_try_again_button_mouse_exited)
 	try_again_button.button_down.connect(_on_try_again_button_down)
+	ClickSound.exclude(try_again_button)
 	
 	# call anim
 	play_intro()

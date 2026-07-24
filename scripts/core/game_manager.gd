@@ -13,7 +13,7 @@ const BASE_CELL := Vector2i(2, 2)
 const WIN_SURVIVAL_THRESHOLD := 0.5
 const INFECT_CONVERT_RATE := 0.30
 const INFECT_DEATH_RATE := 0.05
-const SPREAD_CHANCE_PER_INFECTED := 0.02
+const SPREAD_CHANCE_PER_INFECTED := 0.015
 const SPREAD_CHANCE_CAP := 0.60
 const SPREAD_INFECT_AMOUNT := 4
 const INCOME_PER_DAY := 10
@@ -85,6 +85,9 @@ const TUTORIAL_FLAG_PATH := "user://tutorial_seen"
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
 
+@onready var map_music: AudioStreamPlayer = $MapMusic
+@onready var treat_sound: AudioStreamPlayer = $TreatSound
+
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
 	ensure_log_headers()
@@ -104,6 +107,9 @@ func _ready() -> void:
 	refresh_status()
 	maybe_start_tutorial.call_deferred()
 	fade_in()
+	Music.stop()
+	map_music.finished.connect(map_music.play)
+	map_music.play()
 
 func fade_in() -> void:
 	# black overlay on top that fades out so the map eases in instead of popping
@@ -497,6 +503,7 @@ func _on_treat_pressed() -> void:
 	last_action_type = "TREAT"
 	last_action_cell = selected_cell
 	play_action_scan(selected_cell, "res://assets/icons/upgrade_treatment.svg", Color(0.32, 0.52, 0.68))
+	treat_sound.play()
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
 	advance_day()
 
