@@ -408,6 +408,52 @@ func collect_income() -> void:
 		total_healthy += cell_data[cell]["healthy"]
 	earn_money(INCOME_PER_DAY + total_healthy / INCOME_PER_HEALTHY)
 
+func play_action_scan(cell: Vector2i, icon_path: String, tint: Color) -> void:
+	# symbol fades in fully clear on the cell while a soft glowing band scans down the tile
+	var icon := Sprite2D.new()
+	icon.texture = load(icon_path)
+	var tex_width: float = icon.texture.get_width()
+	icon.scale = Vector2.ONE * (140.0 / tex_width)
+	icon.position = grid.position + Vector2(cell.x * TILE_PX + TILE_PX / 2.0, cell.y * TILE_PX + TILE_PX / 2.0)
+	icon.modulate = Color(tint.r, tint.g, tint.b, 0.0)
+	icon.z_index = 10
+	add_child(icon)
+
+	# soft gradient band (transparent -> bright -> transparent) instead of a hard-edged bar
+	var band_gradient := Gradient.new()
+	band_gradient.colors = PackedColorArray([
+		Color(tint.r, tint.g, tint.b, 0.0),
+		Color(tint.r, tint.g, tint.b, 0.9),
+		Color(tint.r, tint.g, tint.b, 0.0),
+	])
+	var band_tex := GradientTexture2D.new()
+	band_tex.gradient = band_gradient
+	band_tex.fill = GradientTexture2D.FILL_LINEAR
+	band_tex.fill_from = Vector2(0, 0)
+	band_tex.fill_to = Vector2(0, 1)
+	band_tex.width = TILE_PX - 8
+	band_tex.height = 28
+
+	var scan_band := TextureRect.new()
+	scan_band.texture = band_tex
+	scan_band.size = Vector2(TILE_PX - 8, 28)
+	scan_band.position = grid.position + Vector2(cell.x * TILE_PX + 4, cell.y * TILE_PX - 14)
+	scan_band.z_index = 11
+	add_child(scan_band)
+
+	var tile_bottom: float = grid.position.y + cell.y * TILE_PX + TILE_PX - 14
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(icon, "modulate:a", 1.0, 0.6)
+	tween.tween_property(scan_band, "position:y", tile_bottom, 0.6).set_trans(Tween.TRANS_SINE)
+	tween.chain().tween_interval(0.2)
+	tween.set_parallel(true)
+	tween.tween_property(icon, "modulate:a", 0.0, 0.35)
+	tween.tween_property(scan_band, "modulate:a", 0.0, 0.35)
+	tween.chain().tween_callback(icon.queue_free)
+	tween.tween_callback(scan_band.queue_free)
+
 func has_valid_selection() -> bool:
 	return cell_data.has(selected_cell) and selected_cell != BASE_CELL
 
@@ -428,6 +474,7 @@ func _on_treat_pressed() -> void:
 	doses -= 1
 	last_action_type = "TREAT"
 	last_action_cell = selected_cell
+	play_action_scan(selected_cell, "res://assets/icons/upgrade_treatment.svg", Color(0.32, 0.52, 0.68))
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
 	advance_day()
 
@@ -451,6 +498,7 @@ func _on_clear_pressed() -> void:
 	total_zombies_killed += killed
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
+	play_action_scan(selected_cell, "res://assets/icons/upgrade_clear.svg", Color(0.66, 0.38, 0.38))
 	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
 	advance_day()
 
