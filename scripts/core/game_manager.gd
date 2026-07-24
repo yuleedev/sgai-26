@@ -66,6 +66,7 @@ var doses_value: Label
 var selected_value: Label
 var hud_font: Font
 var treat_button: Button
+var clear_button: Button
 var selection_highlight: Line2D
 var origin_marker: Label
 var zombie_cell := Vector2i.ZERO
@@ -395,7 +396,7 @@ func spread_infection() -> void:
 			var chance: float = min(
 				infected * SPREAD_CHANCE_PER_INFECTED * (target_population / 100.0),
 				SPREAD_CHANCE_CAP,
-			)
+			) * spread_multiplier
 			if randf() < chance:
 				var appear: int = min(SPREAD_INFECT_AMOUNT, target_data["healthy"])
 				target_data["healthy"] -= appear
@@ -436,6 +437,13 @@ func _on_clear_pressed() -> void:
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
 		return
+	if money < reinforced_clear_fee:
+		set_last_action("Not enough funding for Reinforced Clear")
+		return
+	if reinforced_clear_fee > 0:
+		money -= reinforced_clear_fee
+		money_changed.emit(money)
+		_update_skill_tree()
 	var data := cell_data[selected_cell]
 	var killed: int = int(floor(data["infected"] * clear_kill_rate))
 	data["infected"] -= killed
@@ -482,7 +490,10 @@ func buy_skill(skill: String, cost: int) -> bool:
 			max_doses += 5
 			doses += 5
 		"reinforced_clear":
+			clear_kill_rate = 0.55
 			reinforced_clear_fee = 8
+			if clear_button != null:
+				clear_button.text = "Clear ($8K)"
 		"rush_vaccine":
 			vaccine_unlock_day = 22
 		"quarantine":
@@ -634,7 +645,7 @@ func _build_action_panel() -> void:
 	vbox.add_child(header)
 
 	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, Color(0.32, 0.52, 0.68))
-	add_action_button(vbox, "Clear", _on_clear_pressed, Color(0.66, 0.38, 0.38))
+	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, Color(0.66, 0.38, 0.38))
 	add_action_button(vbox, "Wait", _on_wait_pressed, Color(0.40, 0.42, 0.48))
 
 func add_action_button(parent: Node, label: String, handler: Callable, accent: Color) -> Button:
