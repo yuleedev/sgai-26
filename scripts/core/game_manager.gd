@@ -75,6 +75,11 @@ var hover_popup: PanelContainer
 var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
 var skill_tree_ref: CanvasLayer
+var status_panel: PanelContainer
+var action_panel: PanelContainer
+var skill_button_panel: PanelContainer
+var tutorial_ref: CanvasLayer
+const TUTORIAL_FLAG_PATH := "user://tutorial_seen"
 
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
@@ -96,6 +101,7 @@ func _ready() -> void:
 	create_day_controls()
 	create_origin_marker()
 	refresh_status()
+	maybe_start_tutorial.call_deferred()
 	fade_in()
 
 func fade_in() -> void:
@@ -603,6 +609,7 @@ func _build_status_panel() -> void:
 	panel.position = Vector2(24, 24)
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	$UI.add_child(panel)
+	status_panel = panel
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -670,6 +677,7 @@ func _build_skill_tree_button() -> void:
 	panel.offset_right = -24.0
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	$UI.add_child(panel)
+	skill_button_panel = panel
 
 	var button := Button.new()
 	button.text = "Skill Tree"
@@ -692,6 +700,7 @@ func _build_action_panel() -> void:
 	panel.offset_right = -24.0
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	$UI.add_child(panel)
+	action_panel = panel
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
@@ -843,3 +852,60 @@ func build_hover_text(cell: Vector2i) -> String:
 		+ "[color=#ff5b5b]Infected[/color]: %d\n" % data["infected"] \
 		+ "[color=#5b9bff]Cured[/color]: %d\n" % data["cured"] \
 		+ "[color=#b0b0b0]Dead[/color]: %d" % data["dead"]
+
+func maybe_start_tutorial() -> void:
+	if not _should_show_tutorial():
+		return
+	start_tutorial()
+
+func start_tutorial() -> void:
+	if tutorial_ref != null and is_instance_valid(tutorial_ref):
+		return
+	var grid_px := float(GRID_SIZE * TILE_PX)
+	var grid_rect := Rect2(grid.position, Vector2(grid_px, grid_px))
+	var tutorial: CanvasLayer = preload("res://scripts/ui/tutorial.gd").new()
+	tutorial.setup([
+		{
+			"title": "Welcome, Doctor",
+			"body": "A zombie virus has broken out in the city, and you lead the response from the hospital at its center. Each tile is a neighborhood with its own population. The outbreak began at the ORIGIN tile and spreads to neighboring tiles every day. Your job is to keep people alive until the vaccine is ready.",
+			"rect": grid_rect,
+		},
+		{
+			"title": "Read the map",
+			"body": "Tile color shows the danger at a glance: green means healthy, red means the neighborhood is overrun. Click any tile to select it, and hover over one to see its healthy, infected, cured, and dead counts. Go ahead and select a tile to continue.",
+			"rect": grid_rect,
+			"interactive": true,
+		},
+		{
+			"title": "Track your resources",
+			"body": "Three numbers decide how much you can do each day. DAY counts up to the vaccine deadline, FUNDING is the cash healthy neighborhoods bring in to spend on upgrades, and DOSES are your limited charges for treating the infected.",
+			"target": status_panel,
+		},
+		{
+			"title": "Take action",
+			"body": "Select a tile first, then choose a move. Every action advances the day. TREAT spends a dose to cure a share of the infected, CLEAR kills a share fast but the dead cannot be brought back, and WAIT passes the day while the virus keeps spreading.",
+			"target": action_panel,
+		},
+		{
+			"title": "Spend on upgrades",
+			"body": "Open the Skill Tree to turn funding into an edge. Strengthen your treatment, stock extra doses, set up quarantine to slow the spread, or rush the vaccine to end the outbreak sooner.",
+			"target": skill_button_panel,
+		},
+		{
+			"title": "Win the race",
+			"body": "Every day the infection grows and reaches new neighborhoods. Decide where to treat and where to clear, watch your doses and funding, and hold the line until the vaccine. Save at least half the city to win. Good luck.",
+		},
+	])
+	tutorial.finished.connect(_on_tutorial_finished)
+	add_child(tutorial)
+	tutorial_ref = tutorial
+
+func _should_show_tutorial() -> bool:
+	return true  # TODO: revert to `not FileAccess.file_exists(TUTORIAL_FLAG_PATH)` before shipping
+
+func _on_tutorial_finished() -> void:
+	tutorial_ref = null
+	var f := FileAccess.open(TUTORIAL_FLAG_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_line("1")
+		f.close()
