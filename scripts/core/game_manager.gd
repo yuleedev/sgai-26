@@ -10,7 +10,6 @@ const MIN_POPULATION := 50
 const MAX_POPULATION := 150
 const BASE_CELL := Vector2i(2, 2)
 
-const MAX_DAYS := 30
 const WIN_SURVIVAL_THRESHOLD := 0.5
 const INFECT_CONVERT_RATE := 0.30
 const INFECT_DEATH_RATE := 0.05
@@ -323,7 +322,7 @@ func check_ending() -> void:
 		finish_game(people_lost)
 		return
 
-	if day >= vaccine_unlock_day or day > MAX_DAYS:
+	if day >= vaccine_unlock_day:
 		var still_infected := 0
 		var total_dead := 0
 		for cell in cell_data:
