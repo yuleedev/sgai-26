@@ -26,6 +26,12 @@ func _ready() -> void:
 	comic.texture = load(FRAMES[0])
 	start_button.visible = false
 	start_button.modulate.a = 0.0
+	# fade the first panel in so it doesn't pop in abruptly after the scene loads
+	fading = true
+	comic.modulate.a = 0.0
+	var tween := create_tween()
+	tween.tween_property(comic, "modulate:a", 1.0, FADE_TIME)
+	tween.tween_callback(func() -> void: fading = false)
 
 func _unhandled_input(event: InputEvent) -> void:
 	# left click, space, or enter reveals the next panel
