@@ -80,8 +80,8 @@ func style_start_button() -> void:
 	start_button.add_theme_color_override("font_pressed_color", Color("2b2620"))
 
 func start_game() -> void:
-	# ends comic, sets scene to map scene (real game)
-	get_tree().change_scene_to_file("res://scenes/map_scene.tscn")
+	# ends comic, sets scene to tutorial before the real game
+	get_tree().change_scene_to_file("res://scenes/tutorial.tscn")
 
 func _on_start_game_pressed() -> void:
 	start_game()
