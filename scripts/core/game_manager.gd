@@ -75,6 +75,11 @@ var hover_popup: PanelContainer
 var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
 var skill_tree_ref: CanvasLayer
+var status_panel: PanelContainer
+var action_panel: PanelContainer
+var skill_button_panel: PanelContainer
+var tutorial_ref: CanvasLayer
+const TUTORIAL_FLAG_PATH := "user://tutorial_seen"
 
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
@@ -96,6 +101,7 @@ func _ready() -> void:
 	create_day_controls()
 	create_origin_marker()
 	refresh_status()
+	maybe_start_tutorial.call_deferred()
 
 func ensure_log_headers() -> void:
 	if not FileAccess.file_exists(LOG_PATH):
@@ -588,6 +594,7 @@ func _build_status_panel() -> void:
 	panel.position = Vector2(24, 24)
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	$UI.add_child(panel)
+	status_panel = panel
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -655,6 +662,7 @@ func _build_skill_tree_button() -> void:
 	panel.offset_right = -24.0
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	$UI.add_child(panel)
+	skill_button_panel = panel
 
 	var button := Button.new()
 	button.text = "Skill Tree"
@@ -677,6 +685,7 @@ func _build_action_panel() -> void:
 	panel.offset_right = -24.0
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	$UI.add_child(panel)
+	action_panel = panel
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
@@ -828,3 +837,60 @@ func build_hover_text(cell: Vector2i) -> String:
 		+ "[color=#ff5b5b]Infected[/color]: %d\n" % data["infected"] \
 		+ "[color=#5b9bff]Cured[/color]: %d\n" % data["cured"] \
 		+ "[color=#b0b0b0]Dead[/color]: %d" % data["dead"]
+
+func maybe_start_tutorial() -> void:
+	if not _should_show_tutorial():
+		return
+	start_tutorial()
+
+func start_tutorial() -> void:
+	if tutorial_ref != null and is_instance_valid(tutorial_ref):
+		return
+	var grid_px := float(GRID_SIZE * TILE_PX)
+	var grid_rect := Rect2(grid.position, Vector2(grid_px, grid_px))
+	var tutorial: CanvasLayer = preload("res://scripts/ui/tutorial.gd").new()
+	tutorial.setup([
+		{
+			"title": "Welcome, Doctor",
+			"body": "This is the city. Each tile is a neighborhood with its own population. The outbreak began at the ORIGIN tile and spreads to neighbors every day.",
+			"rect": grid_rect,
+		},
+		{
+			"title": "Pick a target",
+			"body": "Go ahead — click any tile to select it. Hover over a tile to see its healthy, infected, cured, and dead counts.",
+			"rect": grid_rect,
+			"interactive": true,
+		},
+		{
+			"title": "Watch your resources",
+			"body": "Track the current DAY against the vaccine deadline, your FUNDING, and how many DOSES you have left.",
+			"target": status_panel,
+		},
+		{
+			"title": "Take action",
+			"body": "With a tile selected: TREAT spends a dose to cure infected, CLEAR kills infected, and WAIT passes the day. Every action advances one day.",
+			"target": action_panel,
+		},
+		{
+			"title": "Upgrade over time",
+			"body": "Open the Skill Tree to spend funding on upgrades like stronger treatment, extra doses, and quarantine.",
+			"target": skill_button_panel,
+		},
+		{
+			"title": "You're ready",
+			"body": "Slow the spread and keep neighborhoods alive until the vaccine arrives. Save at least half the city to win. Good luck.",
+		},
+	])
+	tutorial.finished.connect(_on_tutorial_finished)
+	add_child(tutorial)
+	tutorial_ref = tutorial
+
+func _should_show_tutorial() -> bool:
+	return not FileAccess.file_exists(TUTORIAL_FLAG_PATH)
+
+func _on_tutorial_finished() -> void:
+	tutorial_ref = null
+	var f := FileAccess.open(TUTORIAL_FLAG_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_line("1")
+		f.close()
