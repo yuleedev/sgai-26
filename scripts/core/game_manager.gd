@@ -76,10 +76,6 @@ var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
 var skill_tree_ref: CanvasLayer
 
-var total_people_lost: int = 0
-var total_zombies_killed: int = 0
-var total_zombies_cured: int = 0
-var game_ended := false
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
 
@@ -282,10 +278,6 @@ func advance_day() -> void:
 	log_day_row()
 	day += 1
 	update_all_cells()
-	if day >= MAX_DAYS:
-		end_game()
-		return
-	day += 1
 	refresh_status()
 	check_ending()
 
@@ -364,12 +356,7 @@ func finish_game(people_lost: int) -> void:
 	f.close()
 	refresh_status()
 	game_ended_signal.emit(ending_result, people_lost, total_zombies_killed, total_zombies_cured, original_population)
-
-func end_game() -> void:
-	if game_ended:
-		return
-	game_ended = true
-	GameResults.people_lost = total_people_lost
+	GameResults.people_lost = people_lost
 	GameResults.zombies_killed = total_zombies_killed
 	GameResults.zombies_cured = total_zombies_cured
 	get_tree().change_scene_to_file(end_screen_path)
@@ -391,7 +378,6 @@ func grow_infection() -> void:
 		data["healthy"] -= converted
 		data["infected"] += converted - died
 		data["dead"] += died
-		total_people_lost += died
 
 func spread_infection() -> void:
 	var source_infected: Dictionary[Vector2i, int] = {}
@@ -440,7 +426,6 @@ func _on_treat_pressed() -> void:
 	data["cured"] += cured
 	total_zombies_cured += cured
 	doses -= 1
-	total_zombies_cured += cured
 	last_action_type = "TREAT"
 	last_action_cell = selected_cell
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
@@ -739,7 +724,7 @@ func refresh_status() -> void:
 	if day_value == null:
 		return
 	var selection_text := "(%d, %d)" % [selected_cell.x, selected_cell.y] if has_valid_selection() else "none"
-	day_value.text = "%d / %d" % [day, MAX_DAYS]
+	day_value.text = "%d / %d" % [day, vaccine_unlock_day]
 	funding_value.text = "$%dk" % money
 	doses_value.text = "%d" % doses
 	selected_value.text = selection_text
