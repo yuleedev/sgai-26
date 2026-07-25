@@ -11,6 +11,13 @@ extends Control
 @onready var title: TextureRect = $Title
 @onready var try_again_art: TextureRect = $TryAgainArt
 @onready var try_again_button: Button = $TryAgainButton
+@onready var analysis_art: TextureRect = $AnalysisArt
+@onready var analysis_button: Button = $AnalysisButton
+@onready var code_overlay: Control = $CodeOverlay
+@onready var code_input: LineEdit = $CodeOverlay/CodePanel/CodeForm/CodeInput
+@onready var code_error: Label = $CodeOverlay/CodePanel/CodeForm/CodeError
+@onready var cancel_code_button: Button = $CodeOverlay/CodePanel/CodeForm/Buttons/CancelButton
+@onready var unlock_analysis_button: Button = $CodeOverlay/CodePanel/CodeForm/Buttons/UnlockButton
 @onready var fade_overlay: ColorRect = $FadeOverlay
 
 @onready var hand1: TextureRect = $"RevealMask/1"
@@ -32,6 +39,9 @@ extends Control
 @export var try_again_hover_texture: Texture2D
 @export var try_again_pressed_texture: Texture2D
 @export var try_again_animation_time := 0.7
+@export var analysis_normal_texture: Texture2D
+@export var analysis_hover_texture: Texture2D
+@export var analysis_pressed_texture: Texture2D
 
 # store starting info
 var bg_start_pos: Vector2
@@ -56,10 +66,14 @@ var hand9_pos: Vector2
 var hand10_pos: Vector2
 
 var is_pressing_try_again := false
+var is_pressing_analysis := false
 var is_transitioning := false
 
 # showing scores
 const FONT: FontFile = preload("res://assets/Bangers-Regular.ttf")
+const FINAL_PLAYTHROUGH := 3
+const ACCESS_CODE := "VIRAL-SGAI-26"
+const ANALYSIS_SCENE_PATH := "res://scenes/analysis_screen.tscn"
 const LOST_Y := 430
 const KILLED_Y := 520
 const CURED_Y = 610
@@ -68,11 +82,22 @@ const CURED_Y = 610
 @onready var zombies_cured: Label = $ZombiesCured
 
 func _ready() -> void:
+	var is_final_playthrough := GameResults.playthrough_number >= FINAL_PLAYTHROUGH
+	fade_overlay.show()
+	fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade_overlay.move_to_front()
+	_setup_analysis_controls()
+	analysis_art.visible = is_final_playthrough
+	analysis_button.visible = is_final_playthrough
+	try_again_art.visible = not is_final_playthrough
+	try_again_button.visible = not is_final_playthrough
+
 	# center pivots
 	left_hand.pivot_offset = left_hand.size / 2.0
 	right_hand.pivot_offset = right_hand.size / 2.0
 	fingers.pivot_offset = right_hand.size / 2.0
 	try_again_art.pivot_offset = try_again_art.size / 2.0
+	analysis_art.pivot_offset = analysis_art.size / 2.0
 	
 	# save starting info
 	bg_start_pos = background.position
@@ -89,6 +114,7 @@ func _ready() -> void:
 	fade_overlay.modulate.a = 1.0
 	title.modulate.a = 0.0
 	try_again_art.modulate.a = 0.0
+	analysis_art.modulate.a = 0.0
 	left_hand.modulate.a = 0.0
 	right_hand.modulate.a = 0.0
 	fingers.modulate.a = 0.0
@@ -112,6 +138,7 @@ func _ready() -> void:
 	# offset initial position before motion
 	title.position += Vector2(0,-80)
 	try_again_art.scale = Vector2(1.02, 1.02)
+	analysis_art.scale = Vector2(1.02, 1.02)
 	left_hand.position += Vector2(-80,-20)
 	right_hand.position += Vector2(80, -20)
 	fingers.position += Vector2(80,-20)
@@ -138,6 +165,9 @@ func _ready() -> void:
 	try_again_button.mouse_exited.connect(_on_try_again_button_mouse_exited)
 	try_again_button.button_down.connect(_on_try_again_button_down)
 	ClickSound.exclude(try_again_button)
+	cancel_code_button.pressed.connect(_on_cancel_code_pressed)
+	unlock_analysis_button.pressed.connect(_on_unlock_analysis_pressed)
+	code_input.text_submitted.connect(_on_code_submitted)
 	
 	# call anim
 	play_intro()
@@ -162,16 +192,111 @@ func play_intro() -> void:
 	setup_label(zombies_cured, "Zombies cured: %d" % GameResults.zombies_cured, CURED_Y)
 	show_results()
 	
-	animate_try_again_intro()
-	
-	# emables try again button
-	try_again_button.disabled = false
+	if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
+		await animate_analysis_intro()
+		analysis_button.disabled = false
+	else:
+		await animate_try_again_intro()
+		try_again_button.disabled = false
 	
 	# loop background motion
 	fog_loop()
 	left_hand_loop()
 	right_hand_loop()
-	try_again_button_loop()
+	if GameResults.playthrough_number < FINAL_PLAYTHROUGH:
+		try_again_button_loop()
+	else:
+		analysis_button_loop()
+
+func _setup_analysis_controls() -> void:
+	analysis_button.disabled = true
+	analysis_button.modulate.a = 0.0
+	analysis_art.modulate.a = 0.0
+	analysis_button.text = ""
+	analysis_button.flat = true
+	analysis_button.mouse_entered.connect(_on_analysis_button_mouse_entered)
+	analysis_button.mouse_exited.connect(_on_analysis_button_mouse_exited)
+	analysis_button.button_down.connect(_on_analysis_button_down)
+	ClickSound.exclude(analysis_button)
+	_style_text_button(cancel_code_button, 26)
+	_style_text_button(unlock_analysis_button, 26)
+	code_input.secret = true
+	code_error.text = ""
+	code_overlay.hide()
+
+func _style_text_button(button: Button, font_size: int) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color("f7edc5")
+	normal.border_color = Color("2b2620")
+	normal.set_border_width_all(3)
+	normal.set_corner_radius_all(10)
+	var hover: StyleBoxFlat = normal.duplicate()
+	hover.bg_color = Color("fff7d9")
+	var pressed: StyleBoxFlat = normal.duplicate()
+	pressed.bg_color = Color("e0d3a0")
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_font_override("font", load("res://assets/Play-Regular.ttf"))
+	button.add_theme_font_size_override("font_size", font_size)
+	button.add_theme_color_override("font_color", Color("2b2620"))
+	button.add_theme_color_override("font_hover_color", Color("2b2620"))
+	button.add_theme_color_override("font_pressed_color", Color("2b2620"))
+
+func animate_analysis_intro() -> void:
+	await get_tree().create_timer(0.8).timeout
+	analysis_art.modulate.a = 1.0
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(analysis_art, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(analysis_art, "modulate:a", 1.0, 0.35)
+	await tween.finished
+
+func _on_analysis_button_mouse_entered() -> void:
+	if is_pressing_analysis or is_transitioning:
+		return
+	analysis_art.texture = analysis_hover_texture
+
+func _on_analysis_button_mouse_exited() -> void:
+	if is_pressing_analysis or is_transitioning:
+		return
+	analysis_art.texture = analysis_normal_texture
+
+func _on_analysis_button_down() -> void:
+	if is_pressing_analysis or is_transitioning:
+		return
+	is_pressing_analysis = true
+	analysis_button.disabled = true
+	if analysis_pressed_texture:
+		analysis_art.texture = analysis_pressed_texture
+	code_input.clear()
+	code_error.text = ""
+	code_overlay.show()
+	code_overlay.move_to_front()
+	code_input.grab_focus()
+
+func _on_cancel_code_pressed() -> void:
+	code_overlay.hide()
+	analysis_art.texture = analysis_normal_texture
+	analysis_button.disabled = false
+	is_pressing_analysis = false
+
+func _on_unlock_analysis_pressed() -> void:
+	_validate_access_code(code_input.text)
+
+func _on_code_submitted(code: String) -> void:
+	_validate_access_code(code)
+
+func _validate_access_code(code: String) -> void:
+	if code != ACCESS_CODE:
+		code_error.text = "Incorrect code. Try again."
+		code_input.select_all()
+		code_input.grab_focus()
+		return
+	is_transitioning = true
+	analysis_button.disabled = true
+	code_overlay.hide()
+	transition_to_scene(ANALYSIS_SCENE_PATH)
 
 func animate_title_intro() -> void:
 	title.modulate.a = 1.0
@@ -254,6 +379,17 @@ func try_again_button_loop() -> void:
 		tween_back.tween_property(try_again_art, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		await tween_back.finished
 
+func analysis_button_loop() -> void:
+	while is_inside_tree():
+		var tween := create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(analysis_art, "scale", Vector2(1.02, 1.02), 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		await tween.finished
+		var tween_back := create_tween()
+		tween_back.set_parallel(true)
+		tween_back.tween_property(analysis_art, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		await tween_back.finished
+
 func fog_loop() -> void:
 	while is_inside_tree():
 		var tween := create_tween()
@@ -319,13 +455,16 @@ func play_try_again_animation() -> void:
 	transition_fade()
 
 func transition_fade() -> void:
+	is_transitioning = true
+	transition_to_scene("res://scenes/map_scene.tscn", true)
+
+func transition_to_scene(scene_path: String, begin_next_playthrough := false) -> void:
 	var fade_tween := create_tween()
 	fade_tween.tween_property(fade_overlay, "modulate:a", 1.0, 0.3)
 	await fade_tween.finished
-	start_game()
-
-func start_game() -> void:
-	get_tree().change_scene_to_file("res://scenes/map_scene.tscn")
+	if begin_next_playthrough:
+		GameResults.begin_next_playthrough()
+	get_tree().change_scene_to_file(scene_path)
 
 func setup_label(label: Label, text: String, y: float) -> void:
 	label.text = text
