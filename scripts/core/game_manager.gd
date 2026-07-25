@@ -82,6 +82,10 @@ var skill_button_panel: PanelContainer
 var tutorial_ref: CanvasLayer
 const TUTORIAL_FLAG_PATH := "user://tutorial_seen"
 
+const REINFORCED_CLEAR_RATE := 0.55
+var clear_plus_button: Button
+var reduced_growth_cells: Dictionary[Vector2i, bool] = {}  # treated cells get halved growth for exactly 1 day
+
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
 
@@ -291,9 +295,111 @@ func earn_money(amount: int) -> void:
 	money_changed.emit(money)
 	_update_skill_tree()
 
+var is_transitioning := false
+
+func _build_calendar_card(initial_day: int) -> Control:
+	# a small calendar-page-styled card instead of a plain full-screen label,
+	# so the day-change reads as "a page turning" rather than a static title card
+	const CARD_SIZE := Vector2(240, 280)
+	var card := PanelContainer.new()
+	card.custom_minimum_size = CARD_SIZE
+	card.size = CARD_SIZE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.16, 0.16, 0.19, 0.98)
+	style.set_corner_radius_all(14)
+	style.border_width_bottom = 3
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_color = Color(0.32, 0.32, 0.38)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 20
+	card.add_theme_stylebox_override("panel", style)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 0)
+	card.add_child(vbox)
+
+	var header := PanelContainer.new()
+	var header_style := StyleBoxFlat.new()
+	header_style.bg_color = Color(0.62, 0.18, 0.2)
+	header_style.corner_radius_top_left = 14
+	header_style.corner_radius_top_right = 14
+	header.add_theme_stylebox_override("panel", header_style)
+	header.custom_minimum_size = Vector2(0, 46)
+	vbox.add_child(header)
+
+	var header_label := Label.new()
+	header_label.text = "DAY"
+	header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if hud_font != null:
+		header_label.add_theme_font_override("font", hud_font)
+	header_label.add_theme_font_size_override("font_size", 22)
+	header_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.9))
+	header.add_child(header_label)
+
+	var number_wrap := CenterContainer.new()
+	number_wrap.custom_minimum_size = Vector2(0, CARD_SIZE.y - 46)
+	vbox.add_child(number_wrap)
+
+	var number_label := Label.new()
+	number_label.text = "%d" % initial_day
+	number_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	number_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if hud_font != null:
+		number_label.add_theme_font_override("font", hud_font)
+	number_label.add_theme_font_size_override("font_size", 96)
+	number_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
+	number_wrap.add_child(number_label)
+
+	card.set_meta("day_label", number_label)
+	card.set_meta("card_size", CARD_SIZE)
+	return card
+
+func play_day_transition() -> void:
+	# calendar-flip beat: shows today's number, "flips" the page, reveals tomorrow's
+	is_transitioning = true
+	var layer := CanvasLayer.new()
+	layer.layer = 90
+	add_child(layer)
+
+	var overlay := ColorRect.new()
+	overlay.color = Color(0.02, 0.02, 0.03, 0.0)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(overlay)
+
+	var card := _build_calendar_card(day)
+	var card_size: Vector2 = card.get_meta("card_size")
+	var viewport_size := get_viewport().get_visible_rect().size
+	card.position = (viewport_size - card_size) / 2.0
+	card.pivot_offset = card_size / 2.0
+	card.modulate.a = 0.0
+	layer.add_child(card)
+
+	var day_number_label: Label = card.get_meta("day_label")
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(overlay, "color:a", 0.55, 0.2)
+	tween.tween_property(card, "modulate:a", 1.0, 0.2)
+	tween.chain().tween_interval(0.3)
+	# the flip: collapse vertically to a sliver, swap the number, expand back out
+	tween.tween_property(card, "scale:y", 0.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func(): day_number_label.text = "%d" % (day + 1))
+	tween.tween_property(card, "scale:y", 1.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_interval(0.35)
+	tween.set_parallel(true)
+	tween.tween_property(overlay, "color:a", 0.0, 0.25)
+	tween.tween_property(card, "modulate:a", 0.0, 0.25)
+	await tween.finished
+	layer.queue_free()
+	is_transitioning = false
+
 func advance_day() -> void:
 	if game_ended:
 		return
+	await play_day_transition()
 	grow_infection()
 	spread_infection()
 	collect_income()
@@ -394,7 +500,11 @@ func grow_infection() -> void:
 		# at least 1/day once infected > 0 — otherwise floor() truncation freezes
 		# small counts forever (e.g. floor(2 * 0.30) == 0), which silently kills
 		# spread: a freshly-seeded neighbor cell could never grow past its seed.
-		var growth: int = max(1, int(floor(infected * INFECT_CONVERT_RATE)))
+		var convert_rate := INFECT_CONVERT_RATE
+		if reduced_growth_cells.has(cell):
+			convert_rate *= 0.5
+			reduced_growth_cells.erase(cell)
+		var growth: int = max(1, int(floor(infected * convert_rate)))
 		var converted: int = min(growth, data["healthy"])
 		var died: int = min(int(floor(infected * INFECT_DEATH_RATE)), infected)
 		data["healthy"] -= converted
@@ -431,56 +541,103 @@ func collect_income() -> void:
 	earn_money(INCOME_PER_DAY + total_healthy / INCOME_PER_HEALTHY)
 
 func play_action_scan(cell: Vector2i, icon_path: String, tint: Color) -> void:
-	# symbol fades in fully clear on the cell while a soft glowing band scans down the tile
+	# icon pops in with a bounce (instead of a flat fade), a soft radial ring pulses
+	# outward from the tile center, and a full-tile color wash wipes across left-to-right
+	var tile_origin := grid.position + Vector2(cell.x * TILE_PX, cell.y * TILE_PX)
+	var tile_center := tile_origin + Vector2(TILE_PX / 2.0, TILE_PX / 2.0)
+
+	var wash := ColorRect.new()
+	wash.color = Color(tint.r, tint.g, tint.b, 0.32)
+	wash.position = tile_origin
+	wash.size = Vector2(0.0, TILE_PX)
+	wash.z_index = 9
+	add_child(wash)
+
+	# radial gradient (transparent -> bright -> transparent) makes a soft pulsing ring
+	var ring_gradient := Gradient.new()
+	ring_gradient.offsets = PackedFloat32Array([0.0, 0.7, 1.0])
+	ring_gradient.colors = PackedColorArray([
+		Color(tint.r, tint.g, tint.b, 0.0),
+		Color(tint.r, tint.g, tint.b, 0.55),
+		Color(tint.r, tint.g, tint.b, 0.0),
+	])
+	var ring_tex := GradientTexture2D.new()
+	ring_tex.gradient = ring_gradient
+	ring_tex.fill = GradientTexture2D.FILL_RADIAL
+	ring_tex.fill_from = Vector2(0.5, 0.5)
+	ring_tex.fill_to = Vector2(1.0, 0.5)
+	ring_tex.width = 128
+	ring_tex.height = 128
+
+	var ring := TextureRect.new()
+	ring.texture = ring_tex
+	ring.size = Vector2(TILE_PX, TILE_PX)
+	ring.position = tile_origin
+	ring.pivot_offset = Vector2(TILE_PX / 2.0, TILE_PX / 2.0)
+	ring.scale = Vector2(0.3, 0.3)
+	ring.modulate.a = 0.0
+	ring.z_index = 11
+	add_child(ring)
+
 	var icon := Sprite2D.new()
 	icon.texture = load(icon_path)
 	var tex_width: float = icon.texture.get_width()
-	icon.scale = Vector2.ONE * (140.0 / tex_width)
-	icon.position = grid.position + Vector2(cell.x * TILE_PX + TILE_PX / 2.0, cell.y * TILE_PX + TILE_PX / 2.0)
+	var target_scale := Vector2.ONE * (140.0 / tex_width)
+	icon.scale = target_scale * 0.3
+	icon.position = tile_center
 	icon.modulate = Color(tint.r, tint.g, tint.b, 0.0)
-	icon.z_index = 10
+	icon.z_index = 12
 	add_child(icon)
-
-	# soft gradient band (transparent -> bright -> transparent) instead of a hard-edged bar
-	var band_gradient := Gradient.new()
-	band_gradient.colors = PackedColorArray([
-		Color(tint.r, tint.g, tint.b, 0.0),
-		Color(tint.r, tint.g, tint.b, 0.9),
-		Color(tint.r, tint.g, tint.b, 0.0),
-	])
-	var band_tex := GradientTexture2D.new()
-	band_tex.gradient = band_gradient
-	band_tex.fill = GradientTexture2D.FILL_LINEAR
-	band_tex.fill_from = Vector2(0, 0)
-	band_tex.fill_to = Vector2(0, 1)
-	band_tex.width = TILE_PX - 8
-	band_tex.height = 28
-
-	var scan_band := TextureRect.new()
-	scan_band.texture = band_tex
-	scan_band.size = Vector2(TILE_PX - 8, 28)
-	scan_band.position = grid.position + Vector2(cell.x * TILE_PX + 4, cell.y * TILE_PX - 14)
-	scan_band.z_index = 11
-	add_child(scan_band)
-
-	var tile_bottom: float = grid.position.y + cell.y * TILE_PX + TILE_PX - 14
 
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(icon, "modulate:a", 1.0, 0.6)
-	tween.tween_property(scan_band, "position:y", tile_bottom, 0.6).set_trans(Tween.TRANS_SINE)
-	tween.chain().tween_interval(0.2)
+	tween.tween_property(wash, "size:x", float(TILE_PX), 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(icon, "modulate:a", 1.0, 0.2)
+	tween.tween_property(icon, "scale", target_scale * 1.15, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(ring, "modulate:a", 0.6, 0.1)
+	tween.tween_property(ring, "scale", Vector2.ONE * 1.6, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(icon, "scale", target_scale, 0.12).set_trans(Tween.TRANS_SINE)
 	tween.set_parallel(true)
-	tween.tween_property(icon, "modulate:a", 0.0, 0.35)
-	tween.tween_property(scan_band, "modulate:a", 0.0, 0.35)
-	tween.chain().tween_callback(icon.queue_free)
-	tween.tween_callback(scan_band.queue_free)
+	tween.tween_property(ring, "modulate:a", 0.0, 0.3)
+	tween.chain().tween_interval(0.25)
+	tween.set_parallel(true)
+	tween.tween_property(wash, "modulate:a", 0.0, 0.3)
+	tween.tween_property(icon, "modulate:a", 0.0, 0.3)
+	tween.chain().tween_callback(wash.queue_free)
+	tween.tween_callback(ring.queue_free)
+	tween.tween_callback(icon.queue_free)
+
+func show_floating_text(cell: Vector2i, text: String, color: Color) -> void:
+	# separate from the scan animation on purpose: this is the plain, readable
+	# "what actually changed" number, so a result never has to be inferred
+	# from the tile just looking the same as it did yesterday.
+	var label := Label.new()
+	label.text = text
+	if hud_font != null:
+		label.add_theme_font_override("font", hud_font)
+	label.add_theme_font_size_override("font_size", 26)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.size = Vector2(160, 32)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.position = grid.position + Vector2(cell.x * TILE_PX + TILE_PX / 2.0 - 80, cell.y * TILE_PX + TILE_PX / 2.0 - 16)
+	label.z_index = 15
+	label.modulate.a = 0.0
+	add_child(label)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label, "modulate:a", 1.0, 0.15)
+	tween.tween_property(label, "position:y", label.position.y - 40.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(label, "modulate:a", 0.0, 0.3)
+	tween.chain().tween_callback(label.queue_free)
 
 func has_valid_selection() -> bool:
 	return cell_data.has(selected_cell) and selected_cell != BASE_CELL
 
 func _on_treat_pressed() -> void:
-	if game_ended:
+	if game_ended or is_transitioning:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
@@ -494,25 +651,20 @@ func _on_treat_pressed() -> void:
 	data["cured"] += cured
 	total_zombies_cured += cured
 	doses -= 1
+	reduced_growth_cells[selected_cell] = true
 	last_action_type = "TREAT"
 	last_action_cell = selected_cell
 	play_action_scan(selected_cell, "res://assets/icons/upgrade_treatment.svg", Color(0.32, 0.52, 0.68))
+	show_floating_text(selected_cell, "+%d cured" % cured, Color(0.49, 0.84, 0.34))
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
 	advance_day()
 
 func _on_clear_pressed() -> void:
-	if game_ended:
+	if game_ended or is_transitioning:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
 		return
-	if money < reinforced_clear_fee:
-		set_last_action("Not enough funding for Reinforced Clear")
-		return
-	if reinforced_clear_fee > 0:
-		money -= reinforced_clear_fee
-		money_changed.emit(money)
-		_update_skill_tree()
 	var data := cell_data[selected_cell]
 	var killed: int = int(floor(data["infected"] * clear_kill_rate))
 	data["infected"] -= killed
@@ -521,11 +673,36 @@ func _on_clear_pressed() -> void:
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	play_action_scan(selected_cell, "res://assets/icons/upgrade_clear.svg", Color(0.66, 0.38, 0.38))
+	show_floating_text(selected_cell, "+%d killed" % killed, Color(1.0, 0.36, 0.36))
 	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
 	advance_day()
 
+func _on_clear_plus_pressed() -> void:
+	if game_ended or is_transitioning:
+		return
+	if not has_valid_selection():
+		set_last_action("Select a neighborhood first")
+		return
+	if money < reinforced_clear_fee:
+		set_last_action("Not enough funding for Reinforced Clear")
+		return
+	money -= reinforced_clear_fee
+	money_changed.emit(money)
+	_update_skill_tree()
+	var data := cell_data[selected_cell]
+	var killed: int = int(floor(data["infected"] * REINFORCED_CLEAR_RATE))
+	data["infected"] -= killed
+	data["dead"] += killed
+	total_zombies_killed += killed
+	last_action_type = "CLEAR"
+	last_action_cell = selected_cell
+	play_action_scan(selected_cell, "res://assets/icons/upgrade_clear.svg", Color(0.66, 0.38, 0.38))
+	show_floating_text(selected_cell, "+%d killed" % killed, Color(1.0, 0.36, 0.36))
+	set_last_action("Reinforced Clear (%d, %d): -%d infected, +%d dead ($%dK)" % [selected_cell.x, selected_cell.y, killed, killed, reinforced_clear_fee])
+	advance_day()
+
 func _on_wait_pressed() -> void:
-	if game_ended:
+	if game_ended or is_transitioning:
 		return
 	last_action_type = "WAIT"
 	last_action_cell = Vector2i(-1, -1)
@@ -560,10 +737,10 @@ func buy_skill(skill: String, cost: int) -> bool:
 			max_doses += 5
 			doses += 5
 		"reinforced_clear":
-			clear_kill_rate = 0.55
 			reinforced_clear_fee = 8
-			if clear_button != null:
-				clear_button.text = "Clear ($8K)"
+			if clear_plus_button != null:
+				clear_plus_button.visible = true
+				clear_plus_button.text = "Clear+ ($%dK)" % reinforced_clear_fee
 		"rush_vaccine":
 			vaccine_unlock_day = 22
 		"quarantine":
@@ -720,6 +897,8 @@ func _build_action_panel() -> void:
 
 	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, Color(0.32, 0.52, 0.68))
 	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, Color(0.66, 0.38, 0.38))
+	clear_plus_button = add_action_button(vbox, "Clear+", _on_clear_plus_pressed, Color(0.72, 0.46, 0.30))
+	clear_plus_button.visible = has_skill("reinforced_clear")
 	add_action_button(vbox, "Wait", _on_wait_pressed, Color(0.40, 0.42, 0.48))
 
 func add_action_button(parent: Node, label: String, handler: Callable, accent: Color) -> Button:
