@@ -65,8 +65,11 @@ var ending_result := ""
 var last_action_type := "WAIT"
 var last_action_cell := Vector2i(-1, -1)
 var game_id := ""
-const LOG_PATH := "user://log.csv"
-const SUMMARY_PATH := "user://summary.csv"
+var run_id := 1
+var log_path := ""
+var summary_path := ""
+var prev_total_dead := 0
+var prev_total_cured := 0
 var action_label: Label
 var day_value: Label
 var funding_value: Label
@@ -108,6 +111,13 @@ var end_screen_path := "res://scenes/end_screen.tscn"
 
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
+	run_id = _compute_run_id()
+	# wipe old CSVs after a full 3-run session so data doesn't overlap
+	if run_id > 3:
+		_clear_all_csvs()
+		run_id = 1
+	log_path = "user://log_run%d.csv" % run_id
+	summary_path = "user://summary_run%d.csv" % run_id
 	ensure_log_headers()
 	doses = max_doses
 	initialize_grid()
@@ -129,6 +139,25 @@ func _ready() -> void:
 	map_music.finished.connect(map_music.play)
 	map_music.play()
 
+func _compute_run_id() -> int:
+	var highest := 0
+	for n in range(1, 100):
+		var path := "user://log_run%d.csv" % n
+		if FileAccess.file_exists(path):
+			highest = n
+	return highest + 1
+
+func _clear_all_csvs() -> void:
+	for n in range(1, 100):
+		var log_f := "user://log_run%d.csv" % n
+		var sum_f := "user://summary_run%d.csv" % n
+		if FileAccess.file_exists(log_f):
+			DirAccess.remove_absolute(log_f)
+		if FileAccess.file_exists(sum_f):
+			DirAccess.remove_absolute(sum_f)
+		elif not FileAccess.file_exists(log_f):
+			break
+
 func fade_in() -> void:
 	# black overlay on top that fades out so the map eases in instead of popping
 	var layer := CanvasLayer.new()
@@ -144,13 +173,13 @@ func fade_in() -> void:
 	tween.tween_callback(layer.queue_free)
 
 func ensure_log_headers() -> void:
-	if not FileAccess.file_exists(LOG_PATH):
-		var f := FileAccess.open(LOG_PATH, FileAccess.WRITE)
-		f.store_line("game_id,player_type,day,action,cell_x,cell_y,doses_left,money,total_healthy,total_infected,total_cured,total_dead")
+	if not FileAccess.file_exists(log_path):
+		var f := FileAccess.open(log_path, FileAccess.WRITE)
+		f.store_line("run_id,game_id,player_type,day,action,cell_x,cell_y,doses_left,money,total_healthy,total_infected,total_cured,total_dead,daily_deaths,daily_cured")
 		f.close()
-	if not FileAccess.file_exists(SUMMARY_PATH):
-		var f := FileAccess.open(SUMMARY_PATH, FileAccess.WRITE)
-		f.store_line("game_id,player_type,ending,days_played,people_lost,zombies_killed,zombies_cured")
+	if not FileAccess.file_exists(summary_path):
+		var f := FileAccess.open(summary_path, FileAccess.WRITE)
+		f.store_line("run_id,game_id,player_type,ending,days_played,people_lost,zombies_killed,zombies_cured")
 		f.close()
 
 func add_cell_icons() -> void:
@@ -518,11 +547,17 @@ func log_day_row() -> void:
 		total_cured += d["cured"]
 		total_dead += d["dead"]
 
-	var f := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE)
+	var daily_deaths := total_dead - prev_total_dead
+	var daily_cured := total_cured - prev_total_cured
+	prev_total_dead = total_dead
+	prev_total_cured = total_cured
+
+	var f := FileAccess.open(log_path, FileAccess.READ_WRITE)
 	f.seek_end()
-	f.store_line("%s,human,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d" % [
-		game_id, day, last_action_type, last_action_cell.x, last_action_cell.y,
+	f.store_line("%d,%s,human,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		run_id, game_id, day, last_action_type, last_action_cell.x, last_action_cell.y,
 		doses, money, total_healthy, total_infected, total_cured, total_dead,
+		daily_deaths, daily_cured,
 	])
 	f.close()
 
@@ -571,10 +606,10 @@ func check_ending() -> void:
 
 func finish_game(people_lost: int) -> void:
 	game_ended = true
-	var f := FileAccess.open(SUMMARY_PATH, FileAccess.READ_WRITE)
+	var f := FileAccess.open(summary_path, FileAccess.READ_WRITE)
 	f.seek_end()
-	f.store_line("%s,human,%s,%d,%d,%d,%d" % [
-		game_id, ending_result, day, people_lost, total_zombies_killed, total_zombies_cured,
+	f.store_line("%d,%s,human,%s,%d,%d,%d,%d" % [
+		run_id, game_id, ending_result, day, people_lost, total_zombies_killed, total_zombies_cured,
 	])
 	f.close()
 	refresh_status()
@@ -582,6 +617,8 @@ func finish_game(people_lost: int) -> void:
 	GameResults.people_lost = people_lost
 	GameResults.zombies_killed = total_zombies_killed
 	GameResults.zombies_cured = total_zombies_cured
+
+	GameResults.run_id = run_id
 	var music_fade := create_tween()
 	music_fade.tween_property(map_music, "volume_db", -40.0, 0.6)
 	await music_fade.finished
@@ -891,8 +928,35 @@ func buy_skill(skill: String, cost: int) -> bool:
 		"quarantine": "Quarantine",
 	}
 	set_last_action("Purchased " + skill_names.get(skill, skill))
+
+	log_skill_purchase(skill)
 	_refresh_skill_preview()
+
 	return true
+
+func log_skill_purchase(skill: String) -> void:
+	var total_healthy := 0
+	var total_infected := 0
+	var total_cured := 0
+	var total_dead := 0
+	for cell in cell_data:
+		if cell == BASE_CELL:
+			continue
+		var d: Dictionary = cell_data[cell]
+		total_healthy += d["healthy"]
+		total_infected += d["infected"]
+		total_cured += d["cured"]
+		total_dead += d["dead"]
+	var daily_deaths := total_dead - prev_total_dead
+	var daily_cured := total_cured - prev_total_cured
+	var f := FileAccess.open(log_path, FileAccess.READ_WRITE)
+	f.seek_end()
+	f.store_line("%d,%s,human,%d,SKILL:%s,-1,-1,%d,%d,%d,%d,%d,%d,%d,%d" % [
+		run_id, game_id, day, skill,
+		doses, money, total_healthy, total_infected, total_cured, total_dead,
+		daily_deaths, daily_cured,
+	])
+	f.close()
 
 func _on_skills_pressed() -> void:
 	var tree := preload("res://scenes/skill_tree.tscn").instantiate()
