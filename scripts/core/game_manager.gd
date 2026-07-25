@@ -38,6 +38,14 @@ const COLOR_TILES: Array[Vector2i] =[
 	Vector2i(4,0),
 ]
 
+const TREAT_COLOR := Color(0.49, 0.84, 0.34)       # green (cure) -- was blue, now matches the "+cured" text color
+const CLEAR_COLOR := Color(0.66, 0.38, 0.38)
+const CLEAR_PLUS_ACCENT := Color(0.72, 0.46, 0.30)
+const WAIT_ACCENT := Color(0.40, 0.42, 0.48)
+const KILL_TEXT_COLOR := Color(1.0, 0.36, 0.36)
+
+const SkillTreeScript := preload("res://scripts/ui/skill_tree.gd")  # lets us read SKILLS without instantiating the tree
+
 signal game_ended_signal(ending: String, people_lost: int, zombies_killed: int, zombies_cured: int, total_population: int)
 
 @onready var grid: TileMapLayer = $Grid
@@ -76,20 +84,30 @@ var origin_marker: Label
 var zombie_cell := Vector2i.ZERO
 var cell_data: Dictionary[Vector2i, Dictionary] = {}
 var hover_popup: PanelContainer
+var hover_popup_shown := false
+var hover_fade_tween: Tween
 var hover_label: RichTextLabel
 var hovered_cell := Vector2i(-1, -1)
 var skill_tree_ref: CanvasLayer
 var status_panel: PanelContainer
 var action_panel: PanelContainer
 var skill_button_panel: PanelContainer
+var skill_preview_icons: Dictionary = {}  # icon_path -> {"node": TextureRect, "keys": Array[String]}
 var tutorial_ref: CanvasLayer
 const TUTORIAL_FLAG_PATH := "user://tutorial_seen"
+var risk_highlight_nodes: Array[Line2D] = []
+var risk_highlight_tweens: Array[Tween] = []
+
+const REINFORCED_CLEAR_RATE := 0.55
+var clear_plus_button: Button
+var reduced_growth_cells: Dictionary[Vector2i, bool] = {}  # treated cells get halved growth for exactly 1 day
 
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
 
 @onready var map_music: AudioStreamPlayer = $MapMusic
 @onready var treat_sound: AudioStreamPlayer = $TreatSound
+@onready var clear_sound: AudioStreamPlayer = $ClearSound
 
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
@@ -108,6 +126,7 @@ func _ready() -> void:
 	zombie_cell = random_outer_cell()
 	seed_infection(zombie_cell, STARTING_ZOMBIES)
 	update_all_cells()
+	update_risk_highlights()
 	set_player_cell()
 	add_cell_icons()
 	create_grid_lines()
@@ -117,7 +136,6 @@ func _ready() -> void:
 	refresh_status()
 	maybe_start_tutorial.call_deferred()
 	fade_in()
-	Music.stop()
 	map_music.finished.connect(map_music.play)
 	map_music.play()
 
@@ -318,6 +336,52 @@ func update_individual_cell(cell: Vector2i) -> void:
 		return
 	grid.set_cell(cell, TILE_SOURCE_ID, COLOR_TILES[get_zombie_level(cell)])
 
+func _compute_at_risk_cells() -> Array[Vector2i]:
+	# a clean cell next door to an infected one is "at risk" -- same neighbor
+	# check spread_infection() uses, just asked before the dice roll instead of after
+	var at_risk: Array[Vector2i] = []
+	for cell in cell_data:
+		if cell == BASE_CELL or cell_data[cell]["infected"] > 0:
+			continue
+		for offset in NEIGHBOR_OFFSETS:
+			var neighbor := cell + offset
+			if cell_data.has(neighbor) and neighbor != BASE_CELL and cell_data[neighbor]["infected"] > 0:
+				at_risk.append(cell)
+				break
+	return at_risk
+
+func update_risk_highlights() -> void:
+	for t in risk_highlight_tweens:
+		if t != null:
+			t.kill()
+	risk_highlight_tweens.clear()
+	for node in risk_highlight_nodes:
+		if is_instance_valid(node):
+			node.queue_free()
+	risk_highlight_nodes.clear()
+
+	for cell in _compute_at_risk_cells():
+		var corner := grid.position + Vector2(cell.x * TILE_PX, cell.y * TILE_PX)
+		var outline := Line2D.new()
+		outline.width = 5.0
+		outline.default_color = Color(1.0, 0.55, 0.15)
+		outline.z_index = 6
+		outline.closed = true  # lets the engine miter-join the corner properly, instead of
+		outline.points = PackedVector2Array([  # manually repeating the first point, which leaves a seam
+			corner + Vector2(8, 8),
+			corner + Vector2(TILE_PX - 8, 8),
+			corner + Vector2(TILE_PX - 8, TILE_PX - 8),
+			corner + Vector2(8, TILE_PX - 8),
+		])
+		add_child(outline)
+		risk_highlight_nodes.append(outline)
+
+		var pulse := create_tween()
+		pulse.set_loops()
+		pulse.tween_property(outline, "modulate:a", 0.35, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		pulse.tween_property(outline, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		risk_highlight_tweens.append(pulse)
+
 func set_player_cell() -> void:
 	grid.set_cell(BASE_CELL, TILE_SOURCE_ID, COLOR_TILES[4])
 
@@ -326,17 +390,148 @@ func earn_money(amount: int) -> void:
 	money_changed.emit(money)
 	_update_skill_tree()
 
-func advance_day() -> void:
-	if game_ended:
-		return
-	grow_infection()
-	spread_infection()
-	collect_income()
-	log_day_row()
+var is_transitioning := false
+var tooltip_suppressed := false  # true only during the day-card flip (phase 4); tooltip stays available otherwise
+
+func _build_calendar_card(initial_day: int) -> Control:
+	# a small calendar-page-styled card instead of a plain full-screen label,
+	# so the day-change reads as "a page turning" rather than a static title card
+	const CARD_SIZE := Vector2(240, 280)
+	var card := PanelContainer.new()
+	card.custom_minimum_size = CARD_SIZE
+	card.size = CARD_SIZE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.16, 0.16, 0.19, 0.98)
+	style.set_corner_radius_all(14)
+	style.border_width_bottom = 3
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_color = Color(0.32, 0.32, 0.38)
+	style.shadow_color = Color(0, 0, 0, 0.45)
+	style.shadow_size = 20
+	card.add_theme_stylebox_override("panel", style)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 0)
+	card.add_child(vbox)
+
+	var header := PanelContainer.new()
+	var header_style := StyleBoxFlat.new()
+	header_style.bg_color = Color(0.62, 0.18, 0.2)
+	header_style.corner_radius_top_left = 14
+	header_style.corner_radius_top_right = 14
+	header.add_theme_stylebox_override("panel", header_style)
+	header.custom_minimum_size = Vector2(0, 46)
+	vbox.add_child(header)
+
+	var header_label := Label.new()
+	header_label.text = "DAY"
+	header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if hud_font != null:
+		header_label.add_theme_font_override("font", hud_font)
+	header_label.add_theme_font_size_override("font_size", 22)
+	header_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.9))
+	header.add_child(header_label)
+
+	var number_wrap := CenterContainer.new()
+	number_wrap.custom_minimum_size = Vector2(0, CARD_SIZE.y - 46)
+	vbox.add_child(number_wrap)
+
+	var number_label := Label.new()
+	number_label.text = "%d" % initial_day
+	number_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	number_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if hud_font != null:
+		number_label.add_theme_font_override("font", hud_font)
+	number_label.add_theme_font_size_override("font_size", 96)
+	number_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
+	number_wrap.add_child(number_label)
+
+	card.set_meta("day_label", number_label)
+	card.set_meta("card_size", CARD_SIZE)
+	return card
+
+func play_day_transition() -> void:
+	# calendar-flip beat: shows today's number, "flips" the page, reveals tomorrow's.
+	var layer := CanvasLayer.new()
+	layer.layer = 90
+	add_child(layer)
+
+	var overlay := ColorRect.new()
+	overlay.color = Color(0.02, 0.02, 0.03, 0.0)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(overlay)
+
+	var card := _build_calendar_card(day)
+	var card_size: Vector2 = card.get_meta("card_size")
+	var viewport_size := get_viewport().get_visible_rect().size
+	# left side, vertically centered -- keeps the grid's center clear instead of
+	# covering it, mirroring how the action panel sits on the right
+	card.position = Vector2(40.0, (viewport_size.y - card_size.y) / 2.0)
+	card.pivot_offset = card_size / 2.0
+	card.modulate.a = 0.0
+	layer.add_child(card)
+
+	var day_number_label: Label = card.get_meta("day_label")
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(overlay, "color:a", 0.55, 0.15)
+	tween.tween_property(card, "modulate:a", 1.0, 0.15)
+	tween.chain().tween_interval(0.15)
+	# the flip: collapse vertically to a sliver, swap the number, expand back out
+	tween.tween_property(card, "scale:y", 0.0, 0.24).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func(): day_number_label.text = "%d" % (day + 1))
+	tween.tween_property(card, "scale:y", 1.0, 0.24).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_interval(0.2)
+	tween.set_parallel(true)
+	tween.tween_property(overlay, "color:a", 0.0, 0.18)
+	tween.tween_property(card, "modulate:a", 0.0, 0.18)
+	await tween.finished
+	layer.queue_free()
+
+func run_day_cycle(cell: Vector2i, icon_path: String, tint: Color, floater_text: String, floater_color: Color, add_impact_flash: bool, doses_before: int, funding_before: int, population_before: int) -> void:
+	# Phase 1: action resolves -- floater and counter-tick start immediately (fire-and-forget,
+	# they're allowed to keep animating past this phase's gate); play_action_scan is what
+	# actually gates how long phase 1 lasts, so it's the one thing we await here.
+	show_floating_text(cell, floater_text, floater_color)
+	_tick_stat_label(doses_value, doses_before, doses, func(v): return "%d" % v)
+	if funding_before != money:
+		_tick_stat_label(funding_value, funding_before, money, func(v): return "$%dk" % v)
+	if population_before != living_population():
+		_tick_stat_label(population_value, population_before, living_population(), func(v): return "%d / %d" % [v, original_population])
+	await play_action_scan(cell, icon_path, tint, add_impact_flash)
+	# Phase 2: beat -- nothing, lets the eye settle before the simulation ticks.
+	await get_tree().create_timer(0.15).timeout
+	# Phase 3: simulation ticks -- growth/spread apply.
+	# (fresh snapshot here, not the original pre-action values above, so this tick
+	# animates from where phase 1 left off instead of jumping backward first)
+	var sim_funding_before := money
+	var sim_population_before := living_population()
+	_run_simulation_phase(sim_funding_before, sim_population_before)
+	await get_tree().create_timer(0.5).timeout
+	# Phase 4: day card -- day number flips, tooltip suppressed.
+	tooltip_suppressed = true
+	await play_day_transition()
 	day += 1
-	update_all_cells()
-	refresh_status()
 	check_ending()
+	refresh_status()
+	tooltip_suppressed = false
+	is_transitioning = false
+
+func run_wait_cycle() -> void:
+	await get_tree().create_timer(0.15).timeout
+	_run_simulation_phase(money, living_population())
+	await get_tree().create_timer(0.5).timeout
+	tooltip_suppressed = true
+	await play_day_transition()
+	day += 1
+	check_ending()
+	refresh_status()
+	tooltip_suppressed = false
+	is_transitioning = false
 
 func log_day_row() -> void:
 	var total_healthy := 0
@@ -422,7 +617,11 @@ func finish_game(people_lost: int) -> void:
 	GameResults.people_lost = people_lost
 	GameResults.zombies_killed = total_zombies_killed
 	GameResults.zombies_cured = total_zombies_cured
+
 	GameResults.run_id = run_id
+	var music_fade := create_tween()
+	music_fade.tween_property(map_music, "volume_db", -40.0, 0.6)
+	await music_fade.finished
 	get_tree().change_scene_to_file(end_screen_path)
 
 func grow_infection() -> void:
@@ -436,7 +635,11 @@ func grow_infection() -> void:
 		# at least 1/day once infected > 0 — otherwise floor() truncation freezes
 		# small counts forever (e.g. floor(2 * 0.30) == 0), which silently kills
 		# spread: a freshly-seeded neighbor cell could never grow past its seed.
-		var growth: int = max(1, int(floor(infected * INFECT_CONVERT_RATE)))
+		var convert_rate := INFECT_CONVERT_RATE
+		if reduced_growth_cells.has(cell):
+			convert_rate *= 0.5
+			reduced_growth_cells.erase(cell)
+		var growth: int = max(1, int(floor(infected * convert_rate)))
 		var converted: int = min(growth, data["healthy"])
 		var died: int = min(int(floor(infected * INFECT_DEATH_RATE)), infected)
 		data["healthy"] -= converted
@@ -472,57 +675,132 @@ func collect_income() -> void:
 		total_healthy += cell_data[cell]["healthy"]
 	earn_money(INCOME_PER_DAY + total_healthy / INCOME_PER_HEALTHY)
 
-func play_action_scan(cell: Vector2i, icon_path: String, tint: Color) -> void:
-	# symbol fades in fully clear on the cell while a soft glowing band scans down the tile
+func _run_simulation_phase(funding_before: int, population_before: int) -> void:
+	grow_infection()
+	spread_infection()
+	collect_income()
+	log_day_row()
+	update_all_cells()
+	update_risk_highlights()
+	_tick_stat_label(funding_value, funding_before, money, func(v): return "$%dk" % v)
+	_tick_stat_label(population_value, population_before, living_population(), func(v): return "%d / %d" % [v, original_population])
+
+func play_action_scan(cell: Vector2i, icon_path: String, tint: Color, add_impact_flash: bool = false) -> void:
+	# icon pops in with a bounce (instead of a flat fade), a soft radial ring pulses
+	# outward from the tile center, and a full-tile color wash wipes across left-to-right
+	var tile_origin := grid.position + Vector2(cell.x * TILE_PX, cell.y * TILE_PX)
+	var tile_center := tile_origin + Vector2(TILE_PX / 2.0, TILE_PX / 2.0)
+
+	if add_impact_flash:
+		# Clear-only: a quick dark flash under the wash gives the kill a bit of extra
+		# weight, distinguishing it from Treat's softer reveal. Runs on its own tween
+		# so it can't shift the timing of the main sequence below.
+		var flash := ColorRect.new()
+		flash.color = Color(0, 0, 0, 0.0)
+		flash.position = tile_origin
+		flash.size = Vector2(TILE_PX, TILE_PX)
+		flash.z_index = 8
+		flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(flash)
+		var flash_tween := create_tween()
+		flash_tween.tween_property(flash, "color:a", 0.35, 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		flash_tween.tween_property(flash, "color:a", 0.0, 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		flash_tween.tween_callback(flash.queue_free)
+
+	var wash := ColorRect.new()
+	wash.color = Color(tint.r, tint.g, tint.b, 0.32)
+	wash.position = tile_origin
+	wash.size = Vector2(0.0, TILE_PX)
+	wash.z_index = 9
+	add_child(wash)
+
+	# radial gradient (transparent -> bright -> transparent) makes a soft pulsing ring
+	var ring_gradient := Gradient.new()
+	ring_gradient.offsets = PackedFloat32Array([0.0, 0.7, 1.0])
+	ring_gradient.colors = PackedColorArray([
+		Color(tint.r, tint.g, tint.b, 0.0),
+		Color(tint.r, tint.g, tint.b, 0.55),
+		Color(tint.r, tint.g, tint.b, 0.0),
+	])
+	var ring_tex := GradientTexture2D.new()
+	ring_tex.gradient = ring_gradient
+	ring_tex.fill = GradientTexture2D.FILL_RADIAL
+	ring_tex.fill_from = Vector2(0.5, 0.5)
+	ring_tex.fill_to = Vector2(1.0, 0.5)
+	ring_tex.width = 128
+	ring_tex.height = 128
+
+	var ring := TextureRect.new()
+	ring.texture = ring_tex
+	ring.size = Vector2(TILE_PX, TILE_PX)
+	ring.position = tile_origin
+	ring.pivot_offset = Vector2(TILE_PX / 2.0, TILE_PX / 2.0)
+	ring.scale = Vector2(0.3, 0.3)
+	ring.modulate.a = 0.0
+	ring.z_index = 11
+	add_child(ring)
+
 	var icon := Sprite2D.new()
 	icon.texture = load(icon_path)
 	var tex_width: float = icon.texture.get_width()
-	icon.scale = Vector2.ONE * (140.0 / tex_width)
-	icon.position = grid.position + Vector2(cell.x * TILE_PX + TILE_PX / 2.0, cell.y * TILE_PX + TILE_PX / 2.0)
+	var target_scale := Vector2.ONE * (140.0 / tex_width)
+	icon.scale = target_scale * 0.3
+	icon.position = tile_center
 	icon.modulate = Color(tint.r, tint.g, tint.b, 0.0)
-	icon.z_index = 10
+	icon.z_index = 12
 	add_child(icon)
 
-	# soft gradient band (transparent -> bright -> transparent) instead of a hard-edged bar
-	var band_gradient := Gradient.new()
-	band_gradient.colors = PackedColorArray([
-		Color(tint.r, tint.g, tint.b, 0.0),
-		Color(tint.r, tint.g, tint.b, 0.9),
-		Color(tint.r, tint.g, tint.b, 0.0),
-	])
-	var band_tex := GradientTexture2D.new()
-	band_tex.gradient = band_gradient
-	band_tex.fill = GradientTexture2D.FILL_LINEAR
-	band_tex.fill_from = Vector2(0, 0)
-	band_tex.fill_to = Vector2(0, 1)
-	band_tex.width = TILE_PX - 8
-	band_tex.height = 28
+	# retimed to fit inside the ~0.4s "action resolves" phase budget (was ~1.27s total)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(wash, "size:x", float(TILE_PX), 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(icon, "modulate:a", 1.0, 0.1)
+	tween.tween_property(icon, "scale", target_scale * 1.15, 0.09).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(ring, "modulate:a", 0.6, 0.05)
+	tween.tween_property(ring, "scale", Vector2.ONE * 1.6, 0.15).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(icon, "scale", target_scale, 0.06).set_trans(Tween.TRANS_SINE)
+	tween.set_parallel(true)
+	tween.tween_property(ring, "modulate:a", 0.0, 0.12)
+	tween.chain().tween_interval(0.05)
+	tween.set_parallel(true)
+	tween.tween_property(wash, "modulate:a", 0.0, 0.12)
+	tween.tween_property(icon, "modulate:a", 0.0, 0.12)
+	tween.chain().tween_callback(wash.queue_free)
+	tween.tween_callback(ring.queue_free)
+	tween.tween_callback(icon.queue_free)
+	await tween.finished
 
-	var scan_band := TextureRect.new()
-	scan_band.texture = band_tex
-	scan_band.size = Vector2(TILE_PX - 8, 28)
-	scan_band.position = grid.position + Vector2(cell.x * TILE_PX + 4, cell.y * TILE_PX - 14)
-	scan_band.z_index = 11
-	add_child(scan_band)
-
-	var tile_bottom: float = grid.position.y + cell.y * TILE_PX + TILE_PX - 14
+func show_floating_text(cell: Vector2i, text: String, color: Color) -> void:
+	# separate from the scan animation on purpose: this is the plain, readable
+	# "what actually changed" number, so a result never has to be inferred
+	# from the tile just looking the same as it did yesterday.
+	var label := Label.new()
+	label.text = text
+	if hud_font != null:
+		label.add_theme_font_override("font", hud_font)
+	label.add_theme_font_size_override("font_size", 26)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.size = Vector2(160, 32)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.position = grid.position + Vector2(cell.x * TILE_PX + TILE_PX / 2.0 - 80, cell.y * TILE_PX + TILE_PX / 2.0 - 16)
+	label.z_index = 15
+	label.modulate.a = 0.0
+	add_child(label)
 
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(icon, "modulate:a", 1.0, 0.6)
-	tween.tween_property(scan_band, "position:y", tile_bottom, 0.6).set_trans(Tween.TRANS_SINE)
-	tween.chain().tween_interval(0.2)
-	tween.set_parallel(true)
-	tween.tween_property(icon, "modulate:a", 0.0, 0.35)
-	tween.tween_property(scan_band, "modulate:a", 0.0, 0.35)
-	tween.chain().tween_callback(icon.queue_free)
-	tween.tween_callback(scan_band.queue_free)
+	tween.tween_property(label, "modulate:a", 1.0, 0.15)
+	tween.tween_property(label, "position:y", label.position.y - 40.0, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(label, "modulate:a", 0.0, 0.3)
+	tween.chain().tween_callback(label.queue_free)
 
 func has_valid_selection() -> bool:
 	return cell_data.has(selected_cell) and selected_cell != BASE_CELL
 
 func _on_treat_pressed() -> void:
-	if game_ended:
+	if game_ended or is_transitioning:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
@@ -530,32 +808,33 @@ func _on_treat_pressed() -> void:
 	if doses <= 0:
 		set_last_action("No doses left")
 		return
+	is_transitioning = true
+	var doses_before := doses
+	var funding_before := money
+	var population_before := living_population()
 	var data := cell_data[selected_cell]
 	var cured: int = int(floor(data["infected"] * treat_cure_rate))
 	data["infected"] -= cured
 	data["cured"] += cured
 	total_zombies_cured += cured
 	doses -= 1
+	reduced_growth_cells[selected_cell] = true
 	last_action_type = "TREAT"
 	last_action_cell = selected_cell
-	play_action_scan(selected_cell, "res://assets/icons/upgrade_treatment.svg", Color(0.32, 0.52, 0.68))
 	treat_sound.play()
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
-	advance_day()
+	await run_day_cycle(selected_cell, "res://assets/icons/upgrade_treatment.svg", TREAT_COLOR, "+%d cured" % cured, TREAT_COLOR, false, doses_before, funding_before, population_before)
 
 func _on_clear_pressed() -> void:
-	if game_ended:
+	if game_ended or is_transitioning:
 		return
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
 		return
-	if money < reinforced_clear_fee:
-		set_last_action("Not enough funding for Reinforced Clear")
-		return
-	if reinforced_clear_fee > 0:
-		money -= reinforced_clear_fee
-		money_changed.emit(money)
-		_update_skill_tree()
+	is_transitioning = true
+	var doses_before := doses
+	var funding_before := money
+	var population_before := living_population()
 	var data := cell_data[selected_cell]
 	var killed: int = int(floor(data["infected"] * clear_kill_rate))
 	data["infected"] -= killed
@@ -563,17 +842,45 @@ func _on_clear_pressed() -> void:
 	total_zombies_killed += killed
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
-	play_action_scan(selected_cell, "res://assets/icons/upgrade_clear.svg", Color(0.66, 0.38, 0.38))
+	clear_sound.play()
 	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
-	advance_day()
+	await run_day_cycle(selected_cell, "res://assets/icons/upgrade_clear.svg", CLEAR_COLOR, "+%d killed" % killed, KILL_TEXT_COLOR, true, doses_before, funding_before, population_before)
+
+func _on_clear_plus_pressed() -> void:
+	if game_ended or is_transitioning:
+		return
+	if not has_valid_selection():
+		set_last_action("Select a neighborhood first")
+		return
+	if money < reinforced_clear_fee:
+		set_last_action("Not enough funding for Reinforced Clear")
+		return
+	is_transitioning = true
+	var doses_before := doses
+	var funding_before := money
+	var population_before := living_population()
+	money -= reinforced_clear_fee
+	money_changed.emit(money)
+	_update_skill_tree()
+	var data := cell_data[selected_cell]
+	var killed: int = int(floor(data["infected"] * REINFORCED_CLEAR_RATE))
+	data["infected"] -= killed
+	data["dead"] += killed
+	total_zombies_killed += killed
+	last_action_type = "CLEAR"
+	last_action_cell = selected_cell
+	clear_sound.play()
+	set_last_action("Reinforced Clear (%d, %d): -%d infected, +%d dead ($%dK)" % [selected_cell.x, selected_cell.y, killed, killed, reinforced_clear_fee])
+	await run_day_cycle(selected_cell, "res://assets/icons/upgrade_clear.svg", CLEAR_COLOR, "+%d killed" % killed, KILL_TEXT_COLOR, true, doses_before, funding_before, population_before)
 
 func _on_wait_pressed() -> void:
-	if game_ended:
+	if game_ended or is_transitioning:
 		return
+	is_transitioning = true
 	last_action_type = "WAIT"
 	last_action_cell = Vector2i(-1, -1)
 	set_last_action("Waited")
-	advance_day()
+	await run_wait_cycle()
 
 func set_last_action(text: String) -> void:
 	if action_label != null:
@@ -603,10 +910,10 @@ func buy_skill(skill: String, cost: int) -> bool:
 			max_doses += 5
 			doses += 5
 		"reinforced_clear":
-			clear_kill_rate = 0.55
 			reinforced_clear_fee = 8
-			if clear_button != null:
-				clear_button.text = "Clear ($8K)"
+			if clear_plus_button != null:
+				clear_plus_button.visible = true
+				clear_plus_button.text = "Clear+ ($%dK)" % reinforced_clear_fee
 		"rush_vaccine":
 			vaccine_unlock_day = 22
 		"quarantine":
@@ -621,7 +928,10 @@ func buy_skill(skill: String, cost: int) -> bool:
 		"quarantine": "Quarantine",
 	}
 	set_last_action("Purchased " + skill_names.get(skill, skill))
+
 	log_skill_purchase(skill)
+	_refresh_skill_preview()
+
 	return true
 
 func log_skill_purchase(skill: String) -> void:
@@ -662,13 +972,20 @@ func create_day_controls() -> void:
 	hud_font = _make_ui_font()
 	_build_status_panel()
 	_build_action_panel()
-	_build_skill_tree_button()
+	_build_skill_panel()
 	selection_highlight = Line2D.new()
-	selection_highlight.width = 6.0
-	selection_highlight.default_color = Color(1.0, 0.85, 0.2)
+	selection_highlight.width = 4.0
+	selection_highlight.default_color = Color(1.0, 0.85, 0.2, 0.85)
 	selection_highlight.visible = false
 	selection_highlight.z_index = 5
+	selection_highlight.closed = true
 	add_child(selection_highlight)
+	# same pulse cadence as the risk outlines, so the two don't look like two
+	# different visual languages next to each other
+	var selection_pulse := create_tween()
+	selection_pulse.set_loops()
+	selection_pulse.tween_property(selection_highlight, "modulate:a", 0.6, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	selection_pulse.tween_property(selection_highlight, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _make_ui_font() -> Font:
 	return load("res://assets/Play-Regular.ttf")
@@ -721,24 +1038,13 @@ func _add_stat_row(parent: Node, label_text: String, value_color: Color) -> Labe
 	return value_label
 
 func _make_hud_panel_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.13, 0.14, 0.16, 0.95)
-	style.set_corner_radius_all(10)
-	style.corner_detail = 8
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.border_color = Color(0.24, 0.26, 0.30)
-	style.content_margin_left = 18
-	style.content_margin_right = 18
-	style.content_margin_top = 14
-	style.content_margin_bottom = 14
-	style.shadow_color = Color(0, 0, 0, 0.35)
-	style.shadow_size = 8
-	return style
+	return HudStyle.make_panel_style()
 
-func _build_skill_tree_button() -> void:
+func _build_skill_panel() -> void:
+	# one panel holding both the button and the read-only unlock-progress icons
+	# below it, instead of two separate panels that had to be kept in sync --
+	# this guarantees identical width by construction, and is more compact
+	# overall since there's only one set of borders/margins/shadow, not two.
 	var panel := PanelContainer.new()
 	panel.anchor_left = 1.0
 	panel.anchor_right = 1.0
@@ -749,15 +1055,52 @@ func _build_skill_tree_button() -> void:
 	$UI.add_child(panel)
 	skill_button_panel = panel
 
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	panel.add_child(vbox)
+
 	var button := Button.new()
 	button.text = "Skill Tree"
-	button.custom_minimum_size = Vector2(240, 56)
+	button.custom_minimum_size = Vector2(200, 44)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if hud_font != null:
 		button.add_theme_font_override("font", hud_font)
-	button.add_theme_font_size_override("font_size", 26)
+	button.add_theme_font_size_override("font_size", 22)
 	_style_hud_button(button, Color(0.44, 0.42, 0.58))
 	button.pressed.connect(_on_skills_pressed)
-	panel.add_child(button)
+	vbox.add_child(button)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 8)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(hbox)
+
+	var grouped: Dictionary = {}
+	for entry in SkillTreeScript.SKILLS:
+		if not grouped.has(entry.icon_path):
+			grouped[entry.icon_path] = []
+		grouped[entry.icon_path].append(entry.key)
+
+	for icon_path in grouped:
+		var tex_rect := TextureRect.new()
+		tex_rect.texture = load(icon_path)
+		tex_rect.custom_minimum_size = Vector2(20, 20)
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		hbox.add_child(tex_rect)
+		skill_preview_icons[icon_path] = {"node": tex_rect, "keys": grouped[icon_path]}
+
+	_refresh_skill_preview()
+
+func _refresh_skill_preview() -> void:
+	for icon_path in skill_preview_icons:
+		var entry: Dictionary = skill_preview_icons[icon_path]
+		var unlocked := false
+		for key in entry["keys"]:
+			if has_skill(key):
+				unlocked = true
+				break
+		var node: TextureRect = entry["node"]
+		node.modulate = Color(1, 1, 1, 1) if unlocked else Color(0.45, 0.45, 0.48, 0.55)
 
 func _build_action_panel() -> void:
 	var panel := PanelContainer.new()
@@ -786,9 +1129,11 @@ func _build_action_panel() -> void:
 	header.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
 	vbox.add_child(header)
 
-	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, Color(0.32, 0.52, 0.68))
-	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, Color(0.66, 0.38, 0.38))
-	add_action_button(vbox, "Wait", _on_wait_pressed, Color(0.40, 0.42, 0.48))
+	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, TREAT_COLOR)
+	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, CLEAR_COLOR)
+	clear_plus_button = add_action_button(vbox, "Clear+", _on_clear_plus_pressed, CLEAR_PLUS_ACCENT)
+	clear_plus_button.visible = has_skill("reinforced_clear")
+	add_action_button(vbox, "Wait", _on_wait_pressed, WAIT_ACCENT)
 
 func add_action_button(parent: Node, label: String, handler: Callable, accent: Color) -> Button:
 	var button := Button.new()
@@ -803,37 +1148,7 @@ func add_action_button(parent: Node, label: String, handler: Callable, accent: C
 	return button
 
 func _style_hud_button(btn: Button, accent: Color) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = accent.darkened(0.45)
-	normal.set_corner_radius_all(8)
-	normal.corner_detail = 6
-	normal.border_width_left = 2
-	normal.border_width_right = 2
-	normal.border_width_top = 2
-	normal.border_width_bottom = 2
-	normal.border_color = accent
-	normal.content_margin_top = 8
-	normal.content_margin_bottom = 8
-	normal.shadow_color = Color(0, 0, 0, 0.35)
-	normal.shadow_size = 4
-	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = accent.darkened(0.25)
-	hover.border_color = accent.lightened(0.2)
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_color_override("font_hover_color", Color.WHITE)
-
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = accent.darkened(0.6)
-	btn.add_theme_stylebox_override("pressed", pressed)
-
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.14, 0.14, 0.15)
-	disabled.border_color = Color(0.22, 0.22, 0.24)
-	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.4, 0.42))
+	HudStyle.style_button(btn, accent)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if game_ended:
@@ -851,12 +1166,13 @@ func update_selection_highlight() -> void:
 			selection_highlight.visible = false
 		return
 	var corner := grid.position + Vector2(selected_cell.x * TILE_PX, selected_cell.y * TILE_PX)
+	# inset to match the risk-highlight outline's inset -- otherwise, when a selected
+	# cell sits next to an at-risk cell, the two outlines crowd/overlap at the shared edge
 	selection_highlight.points = PackedVector2Array([
-		corner,
-		corner + Vector2(TILE_PX, 0),
-		corner + Vector2(TILE_PX, TILE_PX),
-		corner + Vector2(0, TILE_PX),
-		corner,
+		corner + Vector2(8, 8),
+		corner + Vector2(TILE_PX - 8, 8),
+		corner + Vector2(TILE_PX - 8, TILE_PX - 8),
+		corner + Vector2(8, TILE_PX - 8),
 	])
 	selection_highlight.visible = true
 
@@ -891,6 +1207,13 @@ func refresh_status() -> void:
 	if treat_button != null:
 		treat_button.disabled = doses <= 0
 
+func _tick_stat_label(label: Label, from_value: int, to_value: int, formatter: Callable, duration: float = 0.4) -> void:
+	if from_value == to_value:
+		label.text = formatter.call(to_value)
+		return
+	var t := create_tween()
+	t.tween_method(func(v: float): label.text = formatter.call(int(round(v))), float(from_value), float(to_value), duration)
+
 func create_hover_popup() -> void:
 	hover_popup = PanelContainer.new()
 	hover_popup.visible = false
@@ -911,16 +1234,35 @@ func create_hover_popup() -> void:
 func _process(_delta: float) -> void:
 	if hover_popup == null:
 		return
+	if tooltip_suppressed:
+		_fade_hover_popup(false)
+		return
 	var cell := grid.local_to_map(grid.to_local(get_global_mouse_position()))
 	if not cell_data.has(cell):
-		hover_popup.visible = false
+		_fade_hover_popup(false)
 		hovered_cell = Vector2i(-1, -1)
 		return
 	if cell != hovered_cell:
 		hovered_cell = cell
 		hover_label.text = build_hover_text(cell)
 	hover_popup.position = get_viewport().get_mouse_position() + Vector2(18, 18)
-	hover_popup.visible = true
+	_fade_hover_popup(true)
+
+func _fade_hover_popup(should_show: bool) -> void:
+	# same quick fade language as the selection/risk outlines, instead of an instant pop
+	if should_show == hover_popup_shown:
+		return
+	hover_popup_shown = should_show
+	if hover_fade_tween != null:
+		hover_fade_tween.kill()  # rapid mouse movement across cell edges could otherwise
+	if should_show:                # stack overlapping fades fighting over modulate:a
+		hover_popup.visible = true
+		hover_fade_tween = create_tween()
+		hover_fade_tween.tween_property(hover_popup, "modulate:a", 1.0, 0.15)
+	else:
+		hover_fade_tween = create_tween()
+		hover_fade_tween.tween_property(hover_popup, "modulate:a", 0.0, 0.15)
+		hover_fade_tween.tween_callback(func(): hover_popup.visible = false)
 
 func build_hover_text(cell: Vector2i) -> String:
 	if cell == BASE_CELL:

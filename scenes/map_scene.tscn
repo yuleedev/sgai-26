@@ -2,8 +2,9 @@
 
 [ext_resource type="Script" uid="uid://bocjfnp03aftb" path="res://scripts/core/game_manager.gd" id="1_0wcw4"]
 [ext_resource type="Texture2D" uid="uid://b32pgnf8lb6yk" path="res://assets/tiles.png" id="2_ne7uw"]
-[ext_resource type="AudioStream" uid="uid://cumj6w0ngtfgx" path="res://assets/audio/5. Siren Glitch.wav" id="3_5m4q6"]
-[ext_resource type="AudioStream" uid="uid://r4hi7ikspsqr" path="res://assets/audio/tithuh-powerup-success-523645.mp3" id="4_clear_sfx"]
+[ext_resource type="AudioStream" uid="uid://cumj6w0ngtfgx" path="res://assets/audio/mainbgmusic.wav" id="3_5m4q6"]
+[ext_resource type="AudioStream" uid="uid://r4hi7ikspsqr" path="res://assets/audio/treat.mp3" id="4_clear_sfx"]
+[ext_resource type="AudioStream" uid="uid://gthxyy2l7jme" path="res://assets/audio/clearaction.mp3" id="5_clear_sfx"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5m4q6"]
 texture = ExtResource("2_ne7uw")
@@ -32,4 +33,8 @@ volume_db = -20.0
 
 [node name="TreatSound" type="AudioStreamPlayer" parent="." unique_id=487980846]
 stream = ExtResource("4_clear_sfx")
+volume_db = -12.0
+
+[node name="ClearSound" type="AudioStreamPlayer" parent="." unique_id=487980847]
+stream = ExtResource("5_clear_sfx")
 volume_db = -12.0

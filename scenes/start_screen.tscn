@@ -21,7 +21,8 @@
 [ext_resource type="Texture2D" uid="uid://di31uoiemcmxq" path="res://assets/start screen/8.PNG" id="18_r6qw7"]
 [ext_resource type="Texture2D" uid="uid://7jcntbmdwrqo" path="res://assets/start screen/9.PNG" id="19_0y2qr"]
 [ext_resource type="Texture2D" uid="uid://dd1705hwou88l" path="res://assets/start screen/10.PNG" id="20_bjnkw"]
-[ext_resource type="AudioStream" uid="uid://c3fisaxxpnjlw" path="res://assets/audio/start_game.mp3" id="21_37qom"]
+[ext_resource type="AudioStream" uid="uid://c3fisaxxpnjlw" path="res://assets/audio/startbutton.mp3" id="21_37qom"]
+[ext_resource type="AudioStream" uid="uid://diey2gm4piliy" path="res://assets/audio/armsin.mp3" id="22_armsin"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ka6nf"]
 
@@ -176,3 +177,7 @@ theme_override_styles/hover = SubResource("StyleBoxEmpty_ecdxc")
 stream = ExtResource("21_37qom")
 volume_db = -25.0
 pitch_scale = 0.8
+
+[node name="ArmsInSound" type="AudioStreamPlayer" parent="." unique_id=957447883]
+stream = ExtResource("22_armsin")
+volume_db = -24.0
