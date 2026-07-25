@@ -25,7 +25,7 @@ func setup(title: String, left: String, right: String, overall: float, values: A
 	overall_value = overall
 	playthrough_values = values
 	show_playthroughs = show_pts
-	custom_minimum_size = Vector2(0, 138 if show_pts else 92)
+	custom_minimum_size = Vector2(0, (82 + values.size() * 21) if show_pts else 92)
 	queue_redraw()
 
 func _notification(what: int) -> void:
@@ -40,8 +40,13 @@ func _draw() -> void:
 	var right_width := FONT.get_string_size(right_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 	draw_string(FONT, Vector2(track_end - right_width, 49), right_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, MUTED)
 
-	var lane_y = [65.0, 86.0, 107.0, 128.0] if show_playthroughs else [65.0]
-	var lane_labels := ["ALL", "P1", "P2", "P3"] if show_playthroughs else ["ALL"]
+	var pt_count := playthrough_values.size()
+	var lane_y = [65.0]
+	var lane_labels := ["ALL"]
+	if show_playthroughs:
+		for i in range(pt_count):
+			lane_y.append(65.0 + (i + 1) * 21.0)
+			lane_labels.append("P%d" % [i + 1])
 	var bg_style := StyleBoxFlat.new()
 	bg_style.bg_color = SCALE_BG
 	bg_style.set_corner_radius_all(6)
@@ -63,9 +68,10 @@ func _draw() -> void:
 	draw_colored_polygon(diamond, CREAM)
 
 	if show_playthroughs:
-		for i in range(mini(3, playthrough_values.size())):
+		var color_count := PLAYTHROUGH_COLORS.size()
+		for i in range(playthrough_values.size()):
 			var marker_x := _value_position(playthrough_values[i], track_start, track_end)
-			draw_circle(Vector2(marker_x, lane_y[i + 1]), 6.0, PLAYTHROUGH_COLORS[i])
+			draw_circle(Vector2(marker_x, lane_y[i + 1]), 6.0, PLAYTHROUGH_COLORS[i % color_count])
 			draw_arc(Vector2(marker_x, lane_y[i + 1]), 7.0, 0.0, TAU, 20, Color.BLACK, 2.0)
 
 func _value_position(value: float, start: float, end: float) -> float:

@@ -19,6 +19,7 @@ extends Control
 @onready var cancel_code_button: Button = $CodeOverlay/CodePanel/CodeForm/Buttons/CancelButton
 @onready var unlock_analysis_button: Button = $CodeOverlay/CodePanel/CodeForm/Buttons/UnlockButton
 @onready var fade_overlay: ColorRect = $FadeOverlay
+@onready var reveal_mask: TextureRect = $RevealMask
 
 @onready var hand1: TextureRect = $"RevealMask/1"
 @onready var hand2: TextureRect = $"RevealMask/2"
@@ -89,8 +90,41 @@ func _ready() -> void:
 	_setup_analysis_controls()
 	analysis_art.visible = is_final_playthrough
 	analysis_button.visible = is_final_playthrough
-	try_again_art.visible = not is_final_playthrough
-	try_again_button.visible = not is_final_playthrough
+	try_again_art.visible = true
+	try_again_button.visible = true
+
+	if is_final_playthrough:
+		try_again_normal_texture = _crop_texture(try_again_normal_texture, Rect2(553, 673, 814, 299))
+		try_again_hover_texture = _crop_texture(try_again_hover_texture, Rect2(553, 673, 814, 299))
+		try_again_pressed_texture = _crop_texture(try_again_pressed_texture, Rect2(549, 667, 823, 315))
+		try_again_art.texture = try_again_normal_texture
+		try_again_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		try_again_art.stretch_mode = TextureRect.STRETCH_SCALE
+		analysis_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		analysis_art.stretch_mode = TextureRect.STRETCH_SCALE
+
+		var visual_size := Vector2(640, 236)
+		var visual_y := 745.0
+		var try_again_y := visual_y - 7.0
+		var analysis_y := visual_y - 20.0
+		var gap := 70.0
+		var left_x := (1920.0 - visual_size.x * 2.0 - gap) / 2.0
+		var right_x := left_x + visual_size.x + gap
+
+		try_again_art.position = Vector2(left_x, try_again_y)
+		try_again_art.size = visual_size
+		try_again_button.position = Vector2(left_x, try_again_y)
+		try_again_button.size = visual_size
+
+		analysis_art.position = Vector2(right_x, analysis_y)
+		analysis_art.size = visual_size
+		analysis_button.position = Vector2(right_x, analysis_y)
+		analysis_button.size = visual_size
+
+		# Preserve the original reveal animation and transform the entire subtree.
+		var reveal_scale := Vector2(visual_size.x / 823.0, visual_size.y / 315.0)
+		reveal_mask.position = Vector2(left_x, try_again_y) - Vector2(549, 667) * reveal_scale
+		reveal_mask.scale = reveal_scale
 
 	# center pivots
 	left_hand.pivot_offset = left_hand.size / 2.0
@@ -172,6 +206,13 @@ func _ready() -> void:
 	# call anim
 	play_intro()
 
+func _crop_texture(texture: Texture2D, region: Rect2) -> AtlasTexture:
+	var cropped := AtlasTexture.new()
+	cropped.atlas = texture
+	cropped.region = region
+	cropped.filter_clip = true
+	return cropped
+
 func play_intro() -> void:
 	# makes tween and runs every animation at same time
 	var tween := create_tween()
@@ -193,7 +234,9 @@ func play_intro() -> void:
 	show_results()
 	
 	if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
+		animate_try_again_intro()
 		await animate_analysis_intro()
+		try_again_button.disabled = false
 		analysis_button.disabled = false
 	else:
 		await animate_try_again_intro()
@@ -203,9 +246,8 @@ func play_intro() -> void:
 	fog_loop()
 	left_hand_loop()
 	right_hand_loop()
-	if GameResults.playthrough_number < FINAL_PLAYTHROUGH:
-		try_again_button_loop()
-	else:
+	try_again_button_loop()
+	if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
 		analysis_button_loop()
 
 func _setup_analysis_controls() -> void:

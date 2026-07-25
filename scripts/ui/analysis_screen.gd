@@ -96,14 +96,14 @@ func _build_report() -> void:
 
 func _build_stats_table(panel: PanelContainer) -> void:
 	var grid := GridContainer.new()
-	grid.columns = 5
+	grid.columns = results.size() + 2
 	grid.add_theme_constant_override("h_separation", 24)
 	grid.add_theme_constant_override("v_separation", 7)
 	panel.add_child(grid)
-	for heading in ["OUTCOMES", "P1", "P2", "P3", "TOTAL"]:
-		var header := _make_label(heading, 20, CREAM, UI_FONT)
-		header.custom_minimum_size.x = 285 if heading == "OUTCOMES" else 205
-		grid.add_child(header)
+	grid.add_child(_make_label("OUTCOMES", 20, CREAM, UI_FONT, 285))
+	for i in range(results.size()):
+		grid.add_child(_make_label("P%d" % [i + 1], 20, CREAM, UI_FONT, 205))
+	grid.add_child(_make_label("TOTAL", 20, CREAM, UI_FONT, 205))
 
 	_add_stat_row(grid, "ZOMBIES KILLED BY DISEASE", "disease_deaths")
 	_add_stat_row(grid, "ZOMBIES KILLED BY PLAYER", "player_kills")
@@ -111,21 +111,17 @@ func _build_stats_table(panel: PanelContainer) -> void:
 	_add_stat_row(grid, "HEALTHY REMAINING", "survivors")
 
 func _add_stat_row(grid: GridContainer, label_text: String, key: String) -> void:
-	grid.add_child(_make_label(label_text, 20, MUTED, UI_FONT))
+	grid.add_child(_make_label(label_text, 20, MUTED, UI_FONT, 285))
 	var total_value := 0
 	var total_population := 0
-	for i in range(3):
-		if i >= results.size():
-			grid.add_child(_make_label("-", 22, MUTED, UI_FONT))
-			continue
-		var result := results[i]
+	for result in results:
 		var value: int = result.get(key, 0)
 		total_value += value
 		total_population += int(result.get("original_population", 0))
 		var text := "%d / %d" % [value, result.get("original_population", 0)] if key == "survivors" else str(value)
-		grid.add_child(_make_label(text, 22, MUTED, UI_FONT))
+		grid.add_child(_make_label(text, 22, MUTED, UI_FONT, 205))
 	var total_text := "%d / %d" % [total_value, total_population] if key == "survivors" else str(total_value)
-	grid.add_child(_make_label(total_text, 22, CREAM, UI_FONT))
+	grid.add_child(_make_label(total_text, 22, CREAM, UI_FONT, 205))
 
 func _build_scales(panel: PanelContainer) -> void:
 	var section := VBoxContainer.new()
@@ -168,7 +164,7 @@ func _on_scale_view_changed(index: int) -> void:
 	var show_pts := index == 1
 	for row in scale_rows:
 		row.show_playthroughs = show_pts
-		row.custom_minimum_size.y = 138 if show_pts else 92
+		row.custom_minimum_size.y = (82 + row.playthrough_values.size() * 21) if show_pts else 92
 		row.queue_redraw()
 
 func _style_dropdown(dropdown: OptionButton) -> void:
@@ -271,19 +267,18 @@ func _build_infection_peaks(parent: VBoxContainer) -> void:
 
 func _build_upgrade_matrix(parent: VBoxContainer) -> void:
 	var grid := GridContainer.new()
-	grid.columns = 4
+	grid.columns = results.size() + 1
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 5)
 	parent.add_child(grid)
-	for heading in ["UPGRADE", "P1", "P2", "P3"]:
-		var label := _make_label(heading, 17, MUTED, UI_FONT)
-		label.custom_minimum_size.x = 240 if heading == "UPGRADE" else 62
-		grid.add_child(label)
+	grid.add_child(_make_label("UPGRADE", 17, MUTED, UI_FONT, 240))
+	for i in range(results.size()):
+		grid.add_child(_make_label("P%d" % [i + 1], 17, MUTED, UI_FONT, 62))
 	for key in UPGRADE_NAMES:
-		grid.add_child(_make_label(UPGRADE_NAMES[key], 17, CREAM, UI_FONT))
-		for i in range(3):
-			var purchase_day := _upgrade_day(results[i], key) if i < results.size() else 0
-			grid.add_child(_make_label("D%d" % purchase_day if purchase_day > 0 else "-", 17, CREAM, UI_FONT))
+		grid.add_child(_make_label(UPGRADE_NAMES[key], 17, CREAM, UI_FONT, 240))
+		for result in results:
+			var purchase_day := _upgrade_day(result, key)
+			grid.add_child(_make_label("D%d" % purchase_day if purchase_day > 0 else "-", 17, CREAM, UI_FONT, 62))
 
 func _score_result(result: Dictionary, key: String) -> float:
 	var actions: Array = result.get("action_history", [])
@@ -408,12 +403,14 @@ func _make_tag_style() -> StyleBoxFlat:
 	style.content_margin_bottom = 7
 	return style
 
-func _make_label(text: String, font_size: int, color: Color, font: Font) -> Label:
+func _make_label(text: String, font_size: int, color: Color, font: Font, min_width := -1) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_override("font", font)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
+	if min_width > 0:
+		label.custom_minimum_size.x = min_width
 	return label
 
 func _style_accent_button(button: Button, font_size: int) -> void:
