@@ -387,6 +387,9 @@ func finish_game(people_lost: int) -> void:
 	GameResults.people_lost = people_lost
 	GameResults.zombies_killed = total_zombies_killed
 	GameResults.zombies_cured = total_zombies_cured
+	var music_fade := create_tween()
+	music_fade.tween_property(map_music, "volume_db", -40.0, 0.6)
+	await music_fade.finished
 	get_tree().change_scene_to_file(end_screen_path)
 
 func grow_infection() -> void:
