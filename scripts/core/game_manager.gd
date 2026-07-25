@@ -78,8 +78,19 @@ var action_label: Label
 var day_value: Label
 var funding_value: Label
 var doses_value: Label
-var selected_value: Label
 var population_value: Label
+var selection_header: Label
+var selection_no_cell_label: Label
+var selection_stats_box: VBoxContainer
+var selection_healthy_value: Label
+var selection_infected_value: Label
+var selection_cured_value: Label
+var selection_dead_value: Label
+var treat_preview_label: Label
+var clear_preview_label: Label
+var outbreak_totals_value: Label
+var vaccine_progress: ProgressBar
+var vaccine_days_label: Label
 var hud_font: Font
 var treat_button: Button
 var clear_button: Button
@@ -143,7 +154,6 @@ func _ready() -> void:
 	map_music.finished.connect(map_music.play)
 	map_music.play()
 
-<<<<<<< HEAD
 func _set_background_aspect_ratio() -> void:
 	# keeps the vignette a true circle in physical screen space rather than
 	# whatever aspect the raw UV happens to be, if the viewport size ever changes
@@ -154,7 +164,6 @@ func _set_background_aspect_ratio() -> void:
 	if viewport_size.y <= 0:
 		return
 	(bg_rect.material as ShaderMaterial).set_shader_parameter("aspect_ratio", viewport_size.x / viewport_size.y)
-=======
 func _compute_run_id() -> int:
 	var highest := 0
 	for n in range(1, 100):
@@ -173,7 +182,6 @@ func _clear_all_csvs() -> void:
 			DirAccess.remove_absolute(sum_f)
 		elif not FileAccess.file_exists(log_f):
 			break
->>>>>>> 2bb40573233fb095f1622980f81b26db92e783d0
 
 func fade_in() -> void:
 	# black overlay on top that fades out so the map eases in instead of popping
@@ -453,9 +461,9 @@ func play_day_transition() -> void:
 	var card := _build_calendar_card(day)
 	var card_size: Vector2 = card.get_meta("card_size")
 	var viewport_size := get_viewport().get_visible_rect().size
-	# left side, vertically centered -- keeps the grid's center clear instead of
-	# covering it, mirroring how the action panel sits on the right
-	card.position = Vector2(40.0, (viewport_size.y - card_size.y) / 2.0)
+	# left side, lower third -- the left HUD panel grew tall enough (4 sections)
+	# that vertical-center now overlaps it, so this sits below it instead
+	card.position = Vector2(40.0, viewport_size.y - card_size.y - 40.0)
 	card.pivot_offset = card_size / 2.0
 	card.modulate.a = 0.0
 	layer.add_child(card)
@@ -558,24 +566,19 @@ func check_ending() -> void:
 			break
 
 	if all_overrun:
-		var people_lost := 0
-		for cell in cell_data:
-			if cell == BASE_CELL:
-				continue
-			people_lost += cell_data[cell]["infected"] + cell_data[cell]["dead"]
 		ending_result = "LOSS"
-		finish_game(people_lost)
+		finish_game(compute_people_lost())
 		return
 
 	if day >= vaccine_unlock_day:
-		var still_infected := 0
-		var total_dead := 0
+		# captured before the vaccine conversion below zeroes out infected/healthy,
+		# so this matches exactly what compute_people_lost() would have reported
+		# at this instant -- same source as the live HUD line and the LOSS branch above
+		var people_lost := compute_people_lost()
 		for cell in cell_data:
 			if cell == BASE_CELL:
 				continue
 			var d: Dictionary = cell_data[cell]
-			still_infected += d["infected"]
-			total_dead += d["dead"]
 			d["cured"] += d["healthy"]  # vaccine protects everyone still healthy
 			d["healthy"] = 0
 			d["infected"] = 0
@@ -588,7 +591,7 @@ func check_ending() -> void:
 			alive += cell_data[cell]["cured"]
 		var survival_rate := float(alive) / float(original_population) if original_population > 0 else 0.0
 		ending_result = "WIN" if survival_rate >= WIN_SURVIVAL_THRESHOLD else "PYRRHIC"
-		finish_game(total_dead + still_infected)
+		finish_game(people_lost)
 
 func finish_game(people_lost: int) -> void:
 	game_ended = true
@@ -799,7 +802,7 @@ func _on_treat_pressed() -> void:
 	var funding_before := money
 	var population_before := living_population()
 	var data := cell_data[selected_cell]
-	var cured: int = int(floor(data["infected"] * treat_cure_rate))
+	var cured: int = compute_action_amount(data["infected"], treat_cure_rate)
 	data["infected"] -= cured
 	data["cured"] += cured
 	total_zombies_cured += cured
@@ -822,7 +825,7 @@ func _on_clear_pressed() -> void:
 	var funding_before := money
 	var population_before := living_population()
 	var data := cell_data[selected_cell]
-	var killed: int = int(floor(data["infected"] * clear_kill_rate))
+	var killed: int = compute_action_amount(data["infected"], clear_kill_rate)
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
@@ -849,7 +852,7 @@ func _on_clear_plus_pressed() -> void:
 	money_changed.emit(money)
 	_update_skill_tree()
 	var data := cell_data[selected_cell]
-	var killed: int = int(floor(data["infected"] * REINFORCED_CLEAR_RATE))
+	var killed: int = compute_action_amount(data["infected"], REINFORCED_CLEAR_RATE)
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
@@ -976,6 +979,8 @@ func _make_ui_font() -> Font:
 	return load("res://assets/Play-Regular.ttf")
 
 func _build_status_panel() -> void:
+	# one panel, one border/background -- four sections stacked in a single
+	# VBoxContainer and divided by thin HSeparators, not separate bordered panels
 	var panel := PanelContainer.new()
 	panel.position = Vector2(HUD_MARGIN, 24)
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
@@ -983,22 +988,82 @@ func _build_status_panel() -> void:
 	status_panel = panel
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", 10)
 	vbox.custom_minimum_size = Vector2(340, 0)
 	panel.add_child(vbox)
 
+	# Section 1: Status
 	day_value = _add_stat_row(vbox, "DAY", Color(0.9, 0.9, 0.92))
 	funding_value = _add_stat_row(vbox, "FUNDING", Color(0.98, 0.78, 0.24))
 	doses_value = _add_stat_row(vbox, "DOSES", Color(0.55, 0.8, 1.0))
-	selected_value = _add_stat_row(vbox, "SELECTED", Color(0.85, 0.85, 0.88))
 	population_value = _add_stat_row(vbox, "POPULATION", Color(0.6, 0.88, 0.62))
 
-	action_label = Label.new()
-	action_label.add_theme_font_size_override("font_size", 22)
-	action_label.add_theme_color_override("font_color", Color(0.68, 0.68, 0.72))
-	action_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	action_label.custom_minimum_size = Vector2(340, 62)
-	vbox.add_child(action_label)
+	vbox.add_child(HSeparator.new())
+
+	# Section 2: Selected neighborhood
+	selection_header = Label.new()
+	if hud_font != null:
+		selection_header.add_theme_font_override("font", hud_font)
+	selection_header.add_theme_font_size_override("font_size", 22)
+	selection_header.add_theme_color_override("font_color", Color(0.9, 0.9, 0.92))
+	vbox.add_child(selection_header)
+
+	selection_no_cell_label = Label.new()
+	selection_no_cell_label.text = "No neighborhood selected"
+	selection_no_cell_label.add_theme_font_size_override("font_size", 18)
+	selection_no_cell_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.54))
+	vbox.add_child(selection_no_cell_label)
+
+	selection_stats_box = VBoxContainer.new()
+	selection_stats_box.add_theme_constant_override("separation", 6)
+	vbox.add_child(selection_stats_box)
+
+	selection_healthy_value = _add_stat_row(selection_stats_box, "HEALTHY", Color(0.49, 0.84, 0.34))
+	selection_infected_value = _add_stat_row(selection_stats_box, "INFECTED", Color(1.0, 0.36, 0.36))
+	selection_cured_value = _add_stat_row(selection_stats_box, "CURED", Color(0.36, 0.61, 1.0))
+	selection_dead_value = _add_stat_row(selection_stats_box, "DEAD", Color(0.69, 0.69, 0.69))
+
+	treat_preview_label = Label.new()
+	treat_preview_label.add_theme_font_size_override("font_size", 18)
+	selection_stats_box.add_child(treat_preview_label)
+
+	clear_preview_label = Label.new()
+	clear_preview_label.add_theme_font_size_override("font_size", 18)
+	selection_stats_box.add_child(clear_preview_label)
+
+	vbox.add_child(HSeparator.new())
+
+	# Section 3: Outbreak totals
+	outbreak_totals_value = Label.new()
+	if hud_font != null:
+		outbreak_totals_value.add_theme_font_override("font", hud_font)
+	outbreak_totals_value.add_theme_font_size_override("font_size", 18)
+	outbreak_totals_value.add_theme_color_override("font_color", Color(0.75, 0.75, 0.78))
+	vbox.add_child(outbreak_totals_value)
+
+	vbox.add_child(HSeparator.new())
+
+	# Section 4: Vaccine
+	var vaccine_label := Label.new()
+	vaccine_label.text = "VACCINE"
+	if hud_font != null:
+		vaccine_label.add_theme_font_override("font", hud_font)
+	vaccine_label.add_theme_font_size_override("font_size", 20)
+	vaccine_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.88))
+	vbox.add_child(vaccine_label)
+
+	vaccine_progress = ProgressBar.new()
+	vaccine_progress.min_value = 0.0
+	vaccine_progress.max_value = 1.0
+	vaccine_progress.step = 0.001
+	vaccine_progress.show_percentage = false
+	vaccine_progress.custom_minimum_size = Vector2(0, 18)
+	vbox.add_child(vaccine_progress)
+
+	vaccine_days_label = Label.new()
+	vaccine_days_label.add_theme_font_size_override("font_size", 16)
+	vaccine_days_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
+	vbox.add_child(vaccine_days_label)
 
 func _add_stat_row(parent: Node, label_text: String, value_color: Color) -> Label:
 	var row := HBoxContainer.new()
@@ -1154,6 +1219,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			refresh_status()
 
 func update_selection_highlight() -> void:
+	update_selection_panel()
 	if selection_highlight == null or not has_valid_selection():
 		if selection_highlight != null:
 			selection_highlight.visible = false
@@ -1168,6 +1234,37 @@ func update_selection_highlight() -> void:
 		corner + Vector2(8, TILE_PX - 8),
 	])
 	selection_highlight.visible = true
+
+func update_selection_panel() -> void:
+	if selection_header == null:
+		return
+	if not has_valid_selection():
+		selection_header.visible = false
+		selection_stats_box.visible = false
+		selection_no_cell_label.visible = true
+		return
+	selection_header.visible = true
+	selection_stats_box.visible = true
+	selection_no_cell_label.visible = false
+
+	selection_header.text = "(%d, %d)" % [selected_cell.x, selected_cell.y]
+	var data: Dictionary = cell_data[selected_cell]
+	var infected: int = data["infected"]
+	selection_healthy_value.text = "%d" % data["healthy"]
+	selection_infected_value.text = "%d" % infected
+	selection_cured_value.text = "%d" % data["cured"]
+	selection_dead_value.text = "%d" % data["dead"]
+
+	var cure_amount := compute_action_amount(infected, treat_cure_rate)
+	var kill_amount := compute_action_amount(infected, clear_kill_rate)
+	var treat_available := doses > 0 and infected > 0
+	var clear_available := infected > 0
+
+	treat_preview_label.text = "Treat → %d cured" % cure_amount
+	treat_preview_label.add_theme_color_override("font_color", Color(0.49, 0.84, 0.34) if treat_available else Color(0.5, 0.5, 0.54))
+
+	clear_preview_label.text = "Clear → %d killed" % kill_amount
+	clear_preview_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45) if clear_available else Color(0.5, 0.5, 0.54))
 
 func create_origin_marker() -> void:
 	origin_marker = Label.new()
@@ -1188,17 +1285,47 @@ func living_population() -> int:
 		alive += d["healthy"] + d["infected"] + d["cured"]
 	return alive
 
+func compute_action_amount(infected: int, rate: float) -> int:
+	# single source of truth for "how many people does this action affect" --
+	# used by the real action handlers AND the selected-cell preview lines,
+	# so the preview can never drift out of sync with what actually happens
+	return min(int(floor(infected * rate)), infected)
+
+func compute_people_lost() -> int:
+	# same formula used at game-end (check_ending()) and live in the HUD's
+	# outbreak-totals line, so both always agree with each other
+	var lost := 0
+	for cell in cell_data:
+		if cell == BASE_CELL:
+			continue
+		lost += cell_data[cell]["infected"] + cell_data[cell]["dead"]
+	return lost
+
 func refresh_status() -> void:
 	if day_value == null:
 		return
-	var selection_text := "(%d, %d)" % [selected_cell.x, selected_cell.y] if has_valid_selection() else "none"
 	day_value.text = "%d / %d" % [day, vaccine_unlock_day]
 	funding_value.text = "$%dk" % money
 	doses_value.text = "%d" % doses
-	selected_value.text = selection_text
 	population_value.text = "%d / %d" % [living_population(), original_population]
 	if treat_button != null:
 		treat_button.disabled = doses <= 0
+	_update_outbreak_totals()
+	_update_vaccine_section()
+	update_selection_panel()
+
+func _update_outbreak_totals() -> void:
+	if outbreak_totals_value == null:
+		return
+	outbreak_totals_value.text = "Lost %d · Killed %d · Cured %d" % [compute_people_lost(), total_zombies_killed, total_zombies_cured]
+
+func _update_vaccine_section() -> void:
+	if vaccine_progress == null:
+		return
+	var progress := float(day) / float(vaccine_unlock_day) if vaccine_unlock_day > 0 else 0.0
+	vaccine_progress.value = clamp(progress, 0.0, 1.0)
+	var days_remaining: int = max(vaccine_unlock_day - day, 0)
+	vaccine_days_label.text = "%d days remaining" % days_remaining
 
 func _tick_stat_label(label: Label, from_value: int, to_value: int, formatter: Callable, duration: float = 0.4) -> void:
 	if from_value == to_value:
@@ -1211,7 +1338,10 @@ func create_hover_popup() -> void:
 	hover_popup = PanelContainer.new()
 	hover_popup.visible = false
 	hover_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hover_popup.add_theme_stylebox_override("panel", _make_hud_panel_style())
+	hover_popup.z_index = 50  # always render above the HUD panels regardless of add order
+	var opaque_style := _make_hud_panel_style()
+	opaque_style.bg_color.a = 1.0  # fully opaque -- this box's content changes every frame
+	hover_popup.add_theme_stylebox_override("panel", opaque_style)  # it can't afford any bleed-through
 	hover_label = RichTextLabel.new()
 	hover_label.bbcode_enabled = true
 	hover_label.fit_content = true
