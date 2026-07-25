@@ -38,6 +38,10 @@ const COLOR_TILES: Array[Vector2i] =[
 	Vector2i(4,0),
 ]
 
+const HUD_MARGIN := 24.0  # shared left/right screen margin so the board sits centered between the two side panels
+const RIGHT_HUD_WIDTH := 240.0  # wider of the old skill-panel (200) and action-panel (240) content widths
+const RIGHT_HUD_BLOCK_GAP := 269.0  # matches the previous gap between the (top-anchored) skill panel
+									 # and the (independently center-anchored) action panel at 1920x1080
 const TREAT_COLOR := Color(0.49, 0.84, 0.34)       # green (cure) -- was blue, now matches the "+cured" text color
 const CLEAR_COLOR := Color(0.66, 0.38, 0.38)
 const CLEAR_PLUS_ACCENT := Color(0.72, 0.46, 0.30)
@@ -109,9 +113,9 @@ var end_screen_path := "res://scenes/end_screen.tscn"
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
 	ensure_log_headers()
+	_set_background_aspect_ratio()
 	doses = max_doses
 	initialize_grid()
-	create_map_background()
 	create_grid_frame()
 	zombie_cell = random_outer_cell()
 	seed_infection(zombie_cell, STARTING_ZOMBIES)
@@ -128,6 +132,17 @@ func _ready() -> void:
 	fade_in()
 	map_music.finished.connect(map_music.play)
 	map_music.play()
+
+func _set_background_aspect_ratio() -> void:
+	# keeps the vignette a true circle in physical screen space rather than
+	# whatever aspect the raw UV happens to be, if the viewport size ever changes
+	var bg_rect := get_node_or_null("BackgroundLayer/Background") as ColorRect
+	if bg_rect == null or bg_rect.material == null:
+		return
+	var viewport_size := get_viewport().get_visible_rect().size
+	if viewport_size.y <= 0:
+		return
+	(bg_rect.material as ShaderMaterial).set_shader_parameter("aspect_ratio", viewport_size.x / viewport_size.y)
 
 func fade_in() -> void:
 	# black overlay on top that fades out so the map eases in instead of popping
@@ -167,37 +182,6 @@ func add_cell_icons() -> void:
 			icon.modulate.a = 0.85
 			icon.z_index = 3
 			add_child(icon)
-
-func create_map_background() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = -10
-	add_child(layer)
-
-	var base := ColorRect.new()
-	base.set_anchors_preset(Control.PRESET_FULL_RECT)
-	base.color = Color(0.06, 0.065, 0.08)
-	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(base)
-
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color(0.15, 0.16, 0.19))
-	gradient.set_color(1, Color(0.055, 0.06, 0.075))
-	gradient.add_point(0.55, Color(0.10, 0.11, 0.13))
-
-	var tex := GradientTexture2D.new()
-	tex.gradient = gradient
-	tex.fill = GradientTexture2D.FILL_RADIAL
-	tex.fill_from = Vector2(0.5, 0.42)
-	tex.fill_to = Vector2(1.05, 1.05)
-	tex.width = 512
-	tex.height = 512
-
-	var vignette := TextureRect.new()
-	vignette.texture = tex
-	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vignette.stretch_mode = TextureRect.STRETCH_SCALE
-	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(vignette)
 
 func create_grid_frame() -> void:
 	var layer := CanvasLayer.new()
@@ -907,8 +891,7 @@ func _update_skill_tree() -> void:
 func create_day_controls() -> void:
 	hud_font = _make_ui_font()
 	_build_status_panel()
-	_build_action_panel()
-	_build_skill_panel()
+	_build_right_hud()
 	selection_highlight = Line2D.new()
 	selection_highlight.width = 4.0
 	selection_highlight.default_color = Color(1.0, 0.85, 0.2, 0.85)
@@ -928,7 +911,7 @@ func _make_ui_font() -> Font:
 
 func _build_status_panel() -> void:
 	var panel := PanelContainer.new()
-	panel.position = Vector2(24, 24)
+	panel.position = Vector2(HUD_MARGIN, 24)
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
 	$UI.add_child(panel)
 	status_panel = panel
@@ -976,19 +959,32 @@ func _add_stat_row(parent: Node, label_text: String, value_color: Color) -> Labe
 func _make_hud_panel_style() -> StyleBoxFlat:
 	return HudStyle.make_panel_style()
 
-func _build_skill_panel() -> void:
+func _build_right_hud() -> void:
+	# one VBoxContainer owns both blocks now, so width and right-margin are set
+	# once here instead of independently on each panel (which is what let them
+	# drift out of alignment with each other before).
+	var vbox := VBoxContainer.new()
+	vbox.anchor_left = 1.0
+	vbox.anchor_right = 1.0
+	vbox.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	vbox.offset_top = 24.0
+	vbox.offset_right = -HUD_MARGIN
+	vbox.custom_minimum_size = Vector2(RIGHT_HUD_WIDTH, 0)
+	vbox.add_theme_constant_override("separation", RIGHT_HUD_BLOCK_GAP)
+	$UI.add_child(vbox)
+
+	vbox.add_child(_build_skill_panel_block())
+	vbox.add_child(_build_action_panel_block())
+
+func _build_skill_panel_block() -> PanelContainer:
 	# one panel holding both the button and the read-only unlock-progress icons
 	# below it, instead of two separate panels that had to be kept in sync --
 	# this guarantees identical width by construction, and is more compact
 	# overall since there's only one set of borders/margins/shadow, not two.
+	# Sizing/positioning is owned by the parent right-hud VBoxContainer, not here.
 	var panel := PanelContainer.new()
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
-	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	panel.offset_top = 24.0
-	panel.offset_right = -24.0
+	panel.size_flags_horizontal = Control.SIZE_FILL
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
-	$UI.add_child(panel)
 	skill_button_panel = panel
 
 	var vbox := VBoxContainer.new()
@@ -1026,6 +1022,7 @@ func _build_skill_panel() -> void:
 		skill_preview_icons[icon_path] = {"node": tex_rect, "keys": grouped[icon_path]}
 
 	_refresh_skill_preview()
+	return panel
 
 func _refresh_skill_preview() -> void:
 	for icon_path in skill_preview_icons:
@@ -1038,22 +1035,15 @@ func _refresh_skill_preview() -> void:
 		var node: TextureRect = entry["node"]
 		node.modulate = Color(1, 1, 1, 1) if unlocked else Color(0.45, 0.45, 0.48, 0.55)
 
-func _build_action_panel() -> void:
+func _build_action_panel_block() -> PanelContainer:
+	# sizing/positioning is owned by the parent right-hud VBoxContainer, not here
 	var panel := PanelContainer.new()
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
-	panel.anchor_top = 0.5
-	panel.anchor_bottom = 0.5
-	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.offset_right = -24.0
+	panel.size_flags_horizontal = Control.SIZE_FILL
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
-	$UI.add_child(panel)
 	action_panel = panel
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
-	vbox.custom_minimum_size = Vector2(240, 0)
 	panel.add_child(vbox)
 
 	var header := Label.new()
@@ -1070,6 +1060,7 @@ func _build_action_panel() -> void:
 	clear_plus_button = add_action_button(vbox, "Clear+", _on_clear_plus_pressed, CLEAR_PLUS_ACCENT)
 	clear_plus_button.visible = has_skill("reinforced_clear")
 	add_action_button(vbox, "Wait", _on_wait_pressed, WAIT_ACCENT)
+	return panel
 
 func add_action_button(parent: Node, label: String, handler: Callable, accent: Color) -> Button:
 	var button := Button.new()
