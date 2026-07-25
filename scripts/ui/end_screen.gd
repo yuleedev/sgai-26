@@ -26,6 +26,9 @@ extends Control
 
 # sound effects
 @onready var start_game_sound: AudioStreamPlayer = $StartGameSound
+@onready var arms_in_sound: AudioStreamPlayer = $ArmsInSound
+
+const TITLE_MUSIC := preload("res://assets/audio/startbgmusic.mp3")
 
 # button textures
 @export var try_again_normal_texture: Texture2D
@@ -68,6 +71,8 @@ const CURED_Y = 610
 @onready var zombies_cured: Label = $ZombiesCured
 
 func _ready() -> void:
+	Music.play_track(TITLE_MUSIC, -10.0)
+	start_game_sound.finished.connect(Music.fade_out)
 	# center pivots
 	left_hand.pivot_offset = left_hand.size / 2.0
 	right_hand.pivot_offset = right_hand.size / 2.0
@@ -138,6 +143,7 @@ func _ready() -> void:
 	try_again_button.mouse_exited.connect(_on_try_again_button_mouse_exited)
 	try_again_button.button_down.connect(_on_try_again_button_down)
 	ClickSound.exclude(try_again_button)
+	ClickSound.exclude_hover(try_again_button)
 	
 	# call anim
 	play_intro()
@@ -181,9 +187,10 @@ func animate_title_intro() -> void:
 	await tween.finished
 
 func animate_hands_intro() -> void:
+	arms_in_sound.play()
 	var tween := create_tween()
 	tween.set_parallel(true)
-	
+
 	tween.tween_property(left_hand, "modulate:a", 1.0, 0.2)
 	tween.tween_property(right_hand, "modulate:a", 1.0, 0.2)
 	tween.tween_property(fingers, "modulate:a", 1.0, 0.2)
@@ -325,6 +332,7 @@ func transition_fade() -> void:
 	start_game()
 
 func start_game() -> void:
+	Music.fade_out()
 	get_tree().change_scene_to_file("res://scenes/map_scene.tscn")
 
 func setup_label(label: Label, text: String, y: float) -> void:

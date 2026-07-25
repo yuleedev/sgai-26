@@ -64,7 +64,6 @@ var is_transitioning := false
 
 func _ready() -> void:
 	Music.play_track(TITLE_MUSIC, -10.0)
-	start_game_sound.finished.connect(Music.fade_out)
 	# center pivots
 	left_hand.pivot_offset = left_hand.size / 2.0
 	right_hand.pivot_offset = right_hand.size / 2.0
@@ -132,6 +131,7 @@ func _ready() -> void:
 	start_button.mouse_exited.connect(_on_start_button_mouse_exited)
 	start_button.button_down.connect(_on_start_button_down)
 	ClickSound.exclude(start_button)
+	ClickSound.exclude_hover(start_button)
 	
 	# call anim
 	play_intro()
@@ -272,7 +272,6 @@ func _on_start_button_mouse_exited() -> void:
 
 func start_comic() -> void:
 	# sets scene to comic
-	Music.fade_out()
 	get_tree().change_scene_to_file("res://scenes/comic_scene.tscn")
 
 

@@ -180,4 +180,4 @@ pitch_scale = 0.8
 
 [node name="ArmsInSound" type="AudioStreamPlayer" parent="." unique_id=957447883]
 stream = ExtResource("22_armsin")
-volume_db = -30.0
+volume_db = -24.0

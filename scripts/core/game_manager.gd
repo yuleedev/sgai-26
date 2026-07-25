@@ -108,7 +108,6 @@ func _ready() -> void:
 	refresh_status()
 	maybe_start_tutorial.call_deferred()
 	fade_in()
-	Music.stop()
 	map_music.finished.connect(map_music.play)
 	map_music.play()
 
