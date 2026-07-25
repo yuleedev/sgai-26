@@ -161,7 +161,10 @@ func play_intro() -> void:
 	setup_label(zombies_killed, "Zombies killed: %d" % GameResults.zombies_killed, KILLED_Y)
 	setup_label(zombies_cured, "Zombies cured: %d" % GameResults.zombies_cured, CURED_Y)
 	show_results()
-	
+
+	if GameResults.run_id >= 3:
+		_add_export_buttons()
+
 	animate_try_again_intro()
 	
 	# emables try again button
@@ -342,3 +345,106 @@ func show_results() -> void:
 	tween.tween_property(people_lost, "modulate:a", 1.0, 0.6)
 	tween.tween_property(zombies_killed, "modulate:a", 1.0, 0.6)
 	tween.tween_property(zombies_cured, "modulate:a", 1.0, 0.6)
+
+func _add_export_buttons() -> void:
+	# --- BUTTON CONTAINER (vertical, right side of screen) ---
+	# position: x/y offset from top-left of the screen
+	# size: width/height of the container box
+	# separation: gap between buttons in pixels
+	var container := VBoxContainer.new()
+	container.position = Vector2(1580, 400)  # <-- adjust x/y to move buttons (right side)
+	container.size = Vector2(300, 140)       # <-- adjust width/height
+	container.add_theme_constant_override("separation", 16)  # <-- gap between buttons
+	add_child(container)
+
+	# --- OPEN DATA FOLDER BUTTON ---
+	# text: label shown on the button
+	# custom_minimum_size: button width x height
+	# accent color: border/highlight color (background is auto-darkened)
+	var folder_btn := Button.new()
+	folder_btn.text = "Open Data Folder"
+	folder_btn.custom_minimum_size = Vector2(300, 56)  # <-- button width x height
+	_style_export_button(folder_btn, Color(0.32, 0.52, 0.68))  # <-- blue accent
+	folder_btn.pressed.connect(_on_open_data_folder)
+	ClickSound.exclude(folder_btn)
+	container.add_child(folder_btn)
+
+	# --- COPY CSV TO CLIPBOARD BUTTON ---
+	var copy_btn := Button.new()
+	copy_btn.text = "Copy CSV to Clipboard"
+	copy_btn.custom_minimum_size = Vector2(300, 56)  # <-- button width x height
+	_style_export_button(copy_btn, Color(0.44, 0.42, 0.58))  # <-- purple accent
+	copy_btn.pressed.connect(_on_copy_csv_to_clipboard)
+	ClickSound.exclude(copy_btn)
+	container.add_child(copy_btn)
+
+func _style_export_button(btn: Button, accent: Color) -> void:
+	# --- BUTTON STYLE ---
+	# font_size: text size on the button
+	# corner_radius: roundness of button corners
+	# border_width: thickness of the accent border
+	# content_margin_top/bottom: vertical padding inside the button
+	# shadow_size: drop shadow depth
+	var font := preload("res://assets/Play-Regular.ttf")
+	btn.add_theme_font_override("font", font)
+	btn.add_theme_font_size_override("font_size", 22)  # <-- text size
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = accent.darkened(0.45)   # <-- background darkness (0 = full accent, 1 = black)
+	normal.set_corner_radius_all(8)            # <-- corner roundness in pixels
+	normal.border_width_left = 2               # <-- border thickness (all sides)
+	normal.border_width_right = 2
+	normal.border_width_top = 2
+	normal.border_width_bottom = 2
+	normal.border_color = accent               # <-- border color (uses the accent passed in)
+	normal.content_margin_top = 8              # <-- vertical padding inside button
+	normal.content_margin_bottom = 8
+	normal.shadow_color = Color(0, 0, 0, 0.35) # <-- shadow color/opacity
+	normal.shadow_size = 4                     # <-- shadow blur radius
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = accent.darkened(0.25)
+	hover.border_color = accent.lightened(0.2)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = accent.darkened(0.6)
+	btn.add_theme_stylebox_override("pressed", pressed)
+
+func _on_open_data_folder() -> void:
+	OS.shell_open(OS.get_user_data_dir())
+
+func _on_copy_csv_to_clipboard() -> void:
+	var all_log_content := ""
+	var all_summary_content := ""
+	for n in range(1, GameResults.run_id + 1):
+		var log_path := "user://log_run%d.csv" % n
+		var summary_path := "user://summary_run%d.csv" % n
+		if FileAccess.file_exists(log_path):
+			var f := FileAccess.open(log_path, FileAccess.READ)
+			if f != null:
+				var lines := f.get_as_text().split("\n", true)
+				f.close()
+				# skip header row on subsequent runs so columns aren't repeated
+				var start := 1 if n > 1 else 0
+				for i in range(start, lines.size()):
+					if lines[i].length() > 0:
+						all_log_content += lines[i] + "\n"
+		if FileAccess.file_exists(summary_path):
+			var f := FileAccess.open(summary_path, FileAccess.READ)
+			if f != null:
+				var lines := f.get_as_text().split("\n", true)
+				f.close()
+				var start := 1 if n > 1 else 0
+				for i in range(start, lines.size()):
+					if lines[i].length() > 0:
+						all_summary_content += lines[i] + "\n"
+	var content := ""
+	if all_log_content.length() > 0:
+		content += all_log_content
+	if all_summary_content.length() > 0:
+		if content.length() > 0:
+			content += "\n\n--- SUMMARY ---\n\n"
+		content += all_summary_content
+	if content.length() > 0:
+		DisplayServer.clipboard_set(content)
