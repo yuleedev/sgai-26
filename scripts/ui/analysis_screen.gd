@@ -12,8 +12,7 @@ const SCALE_DEFINITIONS := [
 	{"key": "cure_clear", "title": "INTERVENTION", "left": "CURE", "right": "CLEAR"},
 	{"key": "contain_hotspot", "title": "OUTBREAK CONTROL", "left": "CONTAIN SPREAD", "right": "SUPPRESS HOTSPOTS"},
 	{"key": "focused_broad", "title": "TARGET COVERAGE", "left": "FOCUSED RESPONSE", "right": "BROAD COVERAGE"},
-	{"key": "conserve_invest", "title": "RESOURCE USE", "left": "CONSERVE", "right": "INVEST"},
-	{"key": "early_late", "title": "UPGRADE TIMING", "left": "EARLY", "right": "LATE"},
+	{"key": "investment_strategy", "title": "INVESTMENT STRATEGY", "left": "CAUTIOUS", "right": "AGGRESSIVE"},
 	{"key": "consistent_switching", "title": "ACTION PATTERN", "left": "CONSISTENT", "right": "SWITCHING"},
 ]
 
@@ -33,6 +32,8 @@ const UPGRADE_NAMES := {
 
 var results: Array[Dictionary] = []
 var scale_scores: Dictionary = {}
+var scale_rows: Array = []
+var scale_dropdown: OptionButton
 
 func _ready() -> void:
 	for result in GameResults.playthrough_results:
@@ -70,7 +71,7 @@ func _build_report() -> void:
 	page.add_theme_constant_override("separation", 18)
 	margin.add_child(page)
 
-	var title := _make_label("STRATEGY ANALYSIS", 54, CREAM, DISPLAY_FONT)
+	var title := _make_label("RESULTS", 54, CREAM, DISPLAY_FONT)
 	page.add_child(title)
 
 	var stats_panel := _make_panel()
@@ -130,7 +131,20 @@ func _build_scales(panel: PanelContainer) -> void:
 	var section := VBoxContainer.new()
 	section.add_theme_constant_override("separation", 8)
 	panel.add_child(section)
-	section.add_child(_make_label("STRATEGY SCALES", 30, CREAM, DISPLAY_FONT))
+	var header := HBoxContainer.new()
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(_make_label("STRATEGY ANALYSIS", 30, CREAM, DISPLAY_FONT))
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(spacer)
+	scale_dropdown = OptionButton.new()
+	scale_dropdown.add_item("OVERALL AVERAGE", 0)
+	scale_dropdown.add_item("ALL PLAYTHROUGHS", 1)
+	scale_dropdown.selected = 0
+	_style_dropdown(scale_dropdown)
+	scale_dropdown.item_selected.connect(_on_scale_view_changed)
+	header.add_child(scale_dropdown)
+	section.add_child(header)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	section.add_child(scroll)
@@ -146,8 +160,39 @@ func _build_scales(panel: PanelContainer) -> void:
 		var overall := _average(values)
 		scale_scores[definition.key] = overall
 		var row = STRATEGY_SCALE.new()
-		row.setup(definition.title, definition.left, definition.right, overall, values)
+		row.setup(definition.title, definition.left, definition.right, overall, values, false)
 		rows.add_child(row)
+		scale_rows.append(row)
+
+func _on_scale_view_changed(index: int) -> void:
+	var show_pts := index == 1
+	for row in scale_rows:
+		row.show_playthroughs = show_pts
+		row.custom_minimum_size.y = 138 if show_pts else 92
+		row.queue_redraw()
+
+func _style_dropdown(dropdown: OptionButton) -> void:
+	dropdown.add_theme_font_override("font", UI_FONT)
+	dropdown.add_theme_font_size_override("font_size", 20)
+	dropdown.add_theme_color_override("font_color", CREAM)
+	dropdown.add_theme_color_override("font_hover_color", Color("2b2620"))
+	dropdown.add_theme_color_override("font_hover_pressed_color", Color("2b2620"))
+	dropdown.add_theme_color_override("font_pressed_color", Color("2b2620"))
+	dropdown.add_theme_color_override("font_focus_color", CREAM)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.15, 0.16, 0.19)
+	normal.border_color = Color("383a42")
+	normal.set_border_width_all(1)
+	normal.set_corner_radius_all(6)
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	var hover := normal.duplicate()
+	hover.bg_color = CREAM
+	hover.border_color = Color("2b2620")
+	dropdown.add_theme_stylebox_override("normal", normal)
+	dropdown.add_theme_stylebox_override("hover", hover)
+	dropdown.add_theme_stylebox_override("pressed", hover)
+	dropdown.add_theme_stylebox_override("focus", normal)
 
 func _build_details(panel: PanelContainer) -> void:
 	var scroll := ScrollContainer.new()
@@ -158,7 +203,7 @@ func _build_details(panel: PanelContainer) -> void:
 	details.add_theme_constant_override("separation", 16)
 	scroll.add_child(details)
 
-	details.add_child(_make_label("STRATEGY PROFILE", 30, CREAM, DISPLAY_FONT))
+	details.add_child(_make_label("PROFILE", 30, CREAM, DISPLAY_FONT))
 	_build_strategy_tags(details)
 	details.add_child(HSeparator.new())
 	details.add_child(_make_label("ACTIONS", 27, CREAM, DISPLAY_FONT))
@@ -271,20 +316,20 @@ func _score_result(result: Dictionary, key: String) -> float:
 				unique_cells[target.get("cell", Vector2i(-1, -1))] = true
 			var coverage := float(unique_cells.size() - 1) / float(maxi(1, mini(targets.size(), 24) - 1))
 			return coverage * 2.0 - 1.0
-		"conserve_invest":
+		"investment_strategy":
 			var income: int = result.get("total_income", 0)
-			if income <= 0:
-				return 0.0
-			var spending: int = result.get("upgrade_spending", 0) + result.get("clear_spending", 0)
-			return clampf(float(spending) / float(income) * 2.0 - 1.0, -1.0, 1.0)
-		"early_late":
-			if purchases.is_empty():
-				return 0.0
-			var timing_total := 0.0
-			var final_day: int = maxi(2, result.get("days_played", 2))
-			for purchase in purchases:
-				timing_total += float(int(purchase.get("day", 1)) - 1) / float(final_day - 1)
-			return clampf(timing_total / purchases.size() * 2.0 - 1.0, -1.0, 1.0)
+			var cons_score := 0.0
+			if income > 0:
+				var spending: int = result.get("upgrade_spending", 0) + result.get("clear_spending", 0)
+				cons_score = clampf(float(spending) / float(income) * 2.0 - 1.0, -1.0, 1.0)
+			var late_score := 0.0
+			if not purchases.is_empty():
+				var timing_total := 0.0
+				var final_day: int = maxi(2, result.get("days_played", 2))
+				for purchase in purchases:
+					timing_total += float(int(purchase.get("day", 1)) - 1) / float(final_day - 1)
+				late_score = clampf(timing_total / purchases.size() * 2.0 - 1.0, -1.0, 1.0)
+			return clampf((cons_score + late_score) * 0.5, -1.0, 1.0)
 		"consistent_switching":
 			if actions.size() < 2:
 				return 0.0
