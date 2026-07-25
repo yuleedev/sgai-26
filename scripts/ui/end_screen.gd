@@ -36,6 +36,14 @@ const TITLE_MUSIC := preload("res://assets/audio/startbgmusic.mp3")
 @export var try_again_pressed_texture: Texture2D
 @export var try_again_animation_time := 0.7
 
+# vaccine ui
+@onready var vaccine_ui: TextureRect = $VaccineUI
+@onready var vaccine_art: TextureRect = $VaccineArt
+@onready var vaccine_button: Button = $VaccineButton
+@export var vaccine_normal_texture: Texture2D
+@export var vaccine_hover_texture: Texture2D
+@export var vaccine_pressed_texture: Texture2D
+
 # store starting info
 var bg_start_pos: Vector2
 var bg_start_scale: Vector2
@@ -60,6 +68,7 @@ var hand10_pos: Vector2
 
 var is_pressing_try_again := false
 var is_transitioning := false
+var is_pressing_vaccine := false
 
 # showing scores
 const FONT: FontFile = preload("res://assets/Bangers-Regular.ttf")
@@ -114,6 +123,37 @@ func _ready() -> void:
 	zombies_killed.modulate.a = 0.0
 	zombies_cured.modulate.a = 0.0
 	
+	vaccine_ui.modulate.a = 0.0
+	vaccine_art.modulate.a = 0.0
+	vaccine_button.modulate.a = 0.0
+	
+	vaccine_button.mouse_entered.connect(_on_vaccine_button_mouse_entered)
+	vaccine_button.mouse_exited.connect(_on_vaccine_button_mouse_exited)
+	vaccine_button.pressed.connect(_on_vaccine_button_pressed)
+	
+	show_vaccine_screen()
+
+func show_vaccine_screen() -> void:
+	var tween = create_tween()
+	tween.set_parallel(true)
+	# fade in
+	tween.tween_property(fade_overlay, "modulate:a", 0.0, 1.0)
+	tween.tween_property(background, "modulate:a", 1.0, 0.5)
+	
+	tween.tween_property(vaccine_ui, "modulate:a", 1.0, 0.5)
+	tween.tween_property(vaccine_art, "modulate:a", 1.0, 0.5)
+	tween.tween_property(vaccine_button, "modulate:a", 1.0, 0.5)
+
+func setup_results() -> void:
+	var tween = create_tween()
+	tween.set_parallel(true)
+	$VaccineUI.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$VaccineArt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$VaccineButton.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tween.tween_property(vaccine_ui, "modulate:a", 0.0, 0.5)
+	tween.tween_property(vaccine_art, "modulate:a", 0.0, 0.5)
+	tween.tween_property(vaccine_button, "modulate:a", 0.0, 0.5)
+	
 	# offset initial position before motion
 	title.position += Vector2(0,-80)
 	try_again_art.scale = Vector2(1.02, 1.02)
@@ -153,12 +193,7 @@ func play_intro() -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)
 	
-	# fade in
-	tween.tween_property(fade_overlay, "modulate:a", 0.0, 1.0)
-	tween.tween_property(background, "modulate:a", 1.0, 0.6)
-	
 	# wait for these animations to finish
-	await tween.finished
 	await animate_title_intro()
 	await animate_hands_intro()
 	
@@ -276,6 +311,22 @@ func fog_loop() -> void:
 		tween_back.tween_property(fog, "position", fog_start_pos, 4.0).set_trans(Tween.TRANS_LINEAR)
 		tween_back.tween_property(fog, "modulate:a", 0.5, 4.0)
 		await tween_back.finished
+
+func _on_vaccine_button_mouse_entered() -> void:
+	if is_pressing_vaccine:
+		return
+	vaccine_art.texture = vaccine_hover_texture
+
+func _on_vaccine_button_mouse_exited() -> void:
+	if is_pressing_vaccine:
+		return
+	vaccine_art.texture = vaccine_normal_texture
+
+func _on_vaccine_button_pressed() -> void:
+	if is_pressing_vaccine:
+		return
+	vaccine_art.texture = vaccine_pressed_texture
+	setup_results()
 
 func _on_try_again_button_mouse_entered() -> void:
 	if is_pressing_try_again or is_transitioning:
