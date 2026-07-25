@@ -96,6 +96,9 @@ const NODE_RADIUS := NODE_SIZE / 2
 var upgrade_buttons: Dictionary = {}
 var selected_key: String = ""
 
+const PURCHASE_SOUND: AudioStream = preload("res://assets/audio/purchase.mp3")
+@onready var purchase_sound_player: AudioStreamPlayer = AudioStreamPlayer.new()
+
 func _ready() -> void:
 	_ui_font = _make_ui_font()
 	_apply_theme()
@@ -104,6 +107,10 @@ func _ready() -> void:
 	close_button.pressed.connect(_on_close_pressed)
 	detail_buy_button.pressed.connect(_on_detail_buy_pressed)
 	hide_details()
+
+	purchase_sound_player.stream = PURCHASE_SOUND
+	purchase_sound_player.volume_db = -18.0
+	add_child(purchase_sound_player)
 
 func _make_ui_font() -> Font:
 	return load("res://assets/Play-Regular.ttf")
@@ -483,6 +490,7 @@ func _on_detail_buy_pressed() -> void:
 	var gm = get_parent()
 	var skill = _get_skill(selected_key)
 	if skill != null and gm.buy_skill(selected_key, skill.cost):
+		purchase_sound_player.play()
 		update_ui()
 		if gm.has_method("refresh_status"):
 			gm.refresh_status()

@@ -13,7 +13,7 @@ const BASE_CELL := Vector2i(2, 2)
 const WIN_SURVIVAL_THRESHOLD := 0.5
 const INFECT_CONVERT_RATE := 0.30
 const INFECT_DEATH_RATE := 0.05
-const SPREAD_CHANCE_PER_INFECTED := 0.02
+const SPREAD_CHANCE_PER_INFECTED := 0.015
 const SPREAD_CHANCE_CAP := 0.60
 const SPREAD_INFECT_AMOUNT := 4
 const INCOME_PER_DAY := 10
@@ -89,6 +89,10 @@ var reduced_growth_cells: Dictionary[Vector2i, bool] = {}  # treated cells get h
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
 
+@onready var map_music: AudioStreamPlayer = $MapMusic
+@onready var treat_sound: AudioStreamPlayer = $TreatSound
+@onready var clear_sound: AudioStreamPlayer = $ClearSound
+
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
 	ensure_log_headers()
@@ -108,6 +112,8 @@ func _ready() -> void:
 	refresh_status()
 	maybe_start_tutorial.call_deferred()
 	fade_in()
+	map_music.finished.connect(map_music.play)
+	map_music.play()
 
 func fade_in() -> void:
 	# black overlay on top that fades out so the map eases in instead of popping
@@ -487,6 +493,9 @@ func finish_game(people_lost: int) -> void:
 	GameResults.people_lost = people_lost
 	GameResults.zombies_killed = total_zombies_killed
 	GameResults.zombies_cured = total_zombies_cured
+	var music_fade := create_tween()
+	music_fade.tween_property(map_music, "volume_db", -40.0, 0.6)
+	await music_fade.finished
 	get_tree().change_scene_to_file(end_screen_path)
 
 func grow_infection() -> void:
@@ -655,6 +664,7 @@ func _on_treat_pressed() -> void:
 	last_action_type = "TREAT"
 	last_action_cell = selected_cell
 	play_action_scan(selected_cell, "res://assets/icons/upgrade_treatment.svg", Color(0.32, 0.52, 0.68))
+	treat_sound.play()
 	show_floating_text(selected_cell, "+%d cured" % cured, Color(0.49, 0.84, 0.34))
 	set_last_action("Treated (%d, %d): -%d infected, +%d cured" % [selected_cell.x, selected_cell.y, cured, cured])
 	advance_day()
@@ -673,6 +683,7 @@ func _on_clear_pressed() -> void:
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	play_action_scan(selected_cell, "res://assets/icons/upgrade_clear.svg", Color(0.66, 0.38, 0.38))
+	clear_sound.play()
 	show_floating_text(selected_cell, "+%d killed" % killed, Color(1.0, 0.36, 0.36))
 	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
 	advance_day()
@@ -697,6 +708,7 @@ func _on_clear_plus_pressed() -> void:
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	play_action_scan(selected_cell, "res://assets/icons/upgrade_clear.svg", Color(0.66, 0.38, 0.38))
+	clear_sound.play()
 	show_floating_text(selected_cell, "+%d killed" % killed, Color(1.0, 0.36, 0.36))
 	set_last_action("Reinforced Clear (%d, %d): -%d infected, +%d dead ($%dK)" % [selected_cell.x, selected_cell.y, killed, killed, reinforced_clear_fee])
 	advance_day()

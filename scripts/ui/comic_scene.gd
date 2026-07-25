@@ -87,6 +87,7 @@ func style_start_button() -> void:
 
 func start_game() -> void:
 	# ends comic, sets scene to map scene (real game)
+	Music.fade_out()
 	get_tree().change_scene_to_file("res://scenes/map_scene.tscn")
 
 func _on_start_game_pressed() -> void:

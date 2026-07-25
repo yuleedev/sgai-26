@@ -1,7 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://b261y00xldabt"]
+[gd_scene format=3 uid="uid://b261y00xldabt"]
 
 [ext_resource type="Script" uid="uid://bocjfnp03aftb" path="res://scripts/core/game_manager.gd" id="1_0wcw4"]
 [ext_resource type="Texture2D" uid="uid://b32pgnf8lb6yk" path="res://assets/tiles.png" id="2_ne7uw"]
+[ext_resource type="AudioStream" uid="uid://cumj6w0ngtfgx" path="res://assets/audio/mainbgmusic.wav" id="3_5m4q6"]
+[ext_resource type="AudioStream" uid="uid://r4hi7ikspsqr" path="res://assets/audio/treat.mp3" id="4_clear_sfx"]
+[ext_resource type="AudioStream" uid="uid://gthxyy2l7jme" path="res://assets/audio/clearaction.mp3" id="5_clear_sfx"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5m4q6"]
 texture = ExtResource("2_ne7uw")
@@ -16,10 +19,22 @@ texture_region_size = Vector2i(200, 200)
 tile_size = Vector2i(200, 200)
 sources/0 = SubResource("TileSetAtlasSource_5m4q6")
 
-[node name="MapScene" type="Node2D"]
+[node name="MapScene" type="Node2D" unique_id=952920984]
 script = ExtResource("1_0wcw4")
 
-[node name="Grid" type="TileMapLayer" parent="."]
+[node name="Grid" type="TileMapLayer" parent="." unique_id=1978752745]
 tile_set = SubResource("TileSet_vlip3")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1969089315]
+
+[node name="MapMusic" type="AudioStreamPlayer" parent="." unique_id=673821072]
+stream = ExtResource("3_5m4q6")
+volume_db = -20.0
+
+[node name="TreatSound" type="AudioStreamPlayer" parent="." unique_id=487980846]
+stream = ExtResource("4_clear_sfx")
+volume_db = -12.0
+
+[node name="ClearSound" type="AudioStreamPlayer" parent="." unique_id=487980847]
+stream = ExtResource("5_clear_sfx")
+volume_db = -12.0
