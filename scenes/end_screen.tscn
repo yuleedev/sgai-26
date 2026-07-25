@@ -20,7 +20,7 @@
 [ext_resource type="Texture2D" uid="uid://di31uoiemcmxq" path="res://assets/start screen/8.PNG" id="17_y8dw3"]
 [ext_resource type="Texture2D" uid="uid://7jcntbmdwrqo" path="res://assets/start screen/9.PNG" id="18_j3f4a"]
 [ext_resource type="Texture2D" uid="uid://dd1705hwou88l" path="res://assets/start screen/10.PNG" id="19_bf2dx"]
-[ext_resource type="AudioStream" uid="uid://c3fisaxxpnjlw" path="res://assets/audio/start_game.mp3" id="20_2a1eq"]
+[ext_resource type="AudioStream" uid="uid://c3fisaxxpnjlw" path="res://assets/audio/startbutton.mp3" id="20_2a1eq"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_f4i33"]
 

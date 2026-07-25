@@ -1,7 +1,7 @@
 extends AudioStreamPlayer
 
-const CLICK: AudioStream = preload("res://assets/audio/soundreality-mouse-click-sound-233951.mp3")
-const HOVER: AudioStream = preload("res://assets/audio/denielcz-immersivecontrol-button-click-sound-463065.mp3")
+const CLICK: AudioStream = preload("res://assets/audio/click.mp3")
+const HOVER: AudioStream = preload("res://assets/audio/hover.mp3")
 const CLICK_VOLUME_DB := -26.0
 const HOVER_VOLUME_DB := -22.0
 

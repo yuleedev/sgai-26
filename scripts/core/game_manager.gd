@@ -87,6 +87,7 @@ var end_screen_path := "res://scenes/end_screen.tscn"
 
 @onready var map_music: AudioStreamPlayer = $MapMusic
 @onready var treat_sound: AudioStreamPlayer = $TreatSound
+@onready var clear_sound: AudioStreamPlayer = $ClearSound
 
 func _ready() -> void:
 	game_id = str(Time.get_unix_time_from_system()) + "_" + str(randi())
@@ -528,6 +529,7 @@ func _on_clear_pressed() -> void:
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	play_action_scan(selected_cell, "res://assets/icons/upgrade_clear.svg", Color(0.66, 0.38, 0.38))
+	clear_sound.play()
 	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
 	advance_day()
 

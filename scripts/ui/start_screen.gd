@@ -27,8 +27,9 @@ extends Control
 
 # sound effects
 @onready var start_game_sound: AudioStreamPlayer = $StartGameSound
+@onready var arms_in_sound: AudioStreamPlayer = $ArmsInSound
 
-const TITLE_MUSIC := preload("res://assets/audio/hauntsync-stealth-breacher-tense-title-screen-218087.mp3")
+const TITLE_MUSIC := preload("res://assets/audio/startbgmusic.mp3")
 
 # button textures
 @export var start_normal_texture: Texture2D
@@ -173,9 +174,10 @@ func animate_subtitle_intro() -> void:
 	await tween.finished
 
 func animate_hands_intro() -> void:
+	arms_in_sound.play()
 	var tween := create_tween()
 	tween.set_parallel(true)
-	
+
 	tween.tween_property(left_hand, "modulate:a", 1.0, 0.2)
 	tween.tween_property(right_hand, "modulate:a", 1.0, 0.2)
 	tween.tween_property(fingers, "modulate:a", 1.0, 0.2)
@@ -290,7 +292,7 @@ func play_start_animation() -> void:
 	tween.set_parallel(false)
 	
 	start_game_sound.play()
-	
+
 	hand1.modulate.a = 1.0
 	tween.tween_property(hand1, "position", hand1_pos, 0.06).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	hand2.modulate.a = 1.0
