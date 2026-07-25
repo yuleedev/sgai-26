@@ -5,9 +5,12 @@
 [ext_resource type="Texture2D" uid="uid://bsh6tbn6n3jbd" path="res://assets/end screen/hover try again button.png" id="3_22ape"]
 [ext_resource type="Texture2D" uid="uid://bpg3s6dc00qnk" path="res://assets/start screen/fog.png" id="3_oy4mr"]
 [ext_resource type="Texture2D" uid="uid://bg63t5ukncrjl" path="res://assets/start screen/left hand.PNG" id="4_wledr"]
+[ext_resource type="Texture2D" uid="uid://du4hpgp3oiim1" path="res://assets/vaccine ui/normal vaccine button.PNG" id="5_016ls"]
 [ext_resource type="Texture2D" uid="uid://cmsowwwabjdrl" path="res://assets/start screen/right hand.PNG" id="5_goktl"]
+[ext_resource type="Texture2D" uid="uid://c73wtf4oipidd" path="res://assets/vaccine ui/hover vaccine button.PNG" id="6_33qqg"]
 [ext_resource type="Texture2D" uid="uid://clmdh3vblq215" path="res://assets/end screen/title.png" id="6_t3chd"]
 [ext_resource type="Texture2D" uid="uid://bkaj3dhyg3ahg" path="res://assets/start screen/fingers.PNG" id="7_016ls"]
+[ext_resource type="Texture2D" uid="uid://dyn8roseq3ftr" path="res://assets/vaccine ui/pressed vaccine button.PNG" id="7_hxk3r"]
 [ext_resource type="Texture2D" uid="uid://cytag7rfxmj2e" path="res://assets/end screen/normal try again button.png" id="8_22ape"]
 [ext_resource type="Texture2D" uid="uid://b33w2fon5ncp0" path="res://assets/start screen/press start button.PNG" id="9_hxk3r"]
 [ext_resource type="Texture2D" uid="uid://dfi7b1h0j5h3m" path="res://assets/start screen/1.PNG" id="10_17b70"]
@@ -22,10 +25,21 @@
 [ext_resource type="Texture2D" uid="uid://dd1705hwou88l" path="res://assets/start screen/10.PNG" id="19_bf2dx"]
 [ext_resource type="AudioStream" uid="uid://c3fisaxxpnjlw" path="res://assets/audio/startbutton.mp3" id="20_2a1eq"]
 [ext_resource type="AudioStream" uid="uid://diey2gm4piliy" path="res://assets/audio/armsin.mp3" id="21_armsin"]
+[ext_resource type="Texture2D" uid="uid://bwndvxcdgmf45" path="res://assets/vaccine ui/vaccine ui.PNG" id="24_17b70"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_f4i33"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_oljci"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_0y1wb"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_i1dny"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mk8m1"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_jodks"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_i6udw"]
 
 [node name="EndScene" type="Control" unique_id=1367247054]
 layout_mode = 3
@@ -34,6 +48,8 @@ script = ExtResource("1_t3chd")
 try_again_normal_texture = ExtResource("8_22ape")
 try_again_hover_texture = ExtResource("3_22ape")
 try_again_pressed_texture = ExtResource("9_hxk3r")
+vaccine_hover_texture = ExtResource("6_33qqg")
+vaccine_pressed_texture = ExtResource("7_hxk3r")
 
 [node name="Background" type="TextureRect" parent="." unique_id=1483856364]
 layout_mode = 0
@@ -185,6 +201,34 @@ offset_bottom = 965.85
 rotation = -0.104727104
 theme_override_styles/normal = SubResource("StyleBoxEmpty_f4i33")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_oljci")
+
+[node name="VaccineUI" type="TextureRect" parent="." unique_id=423159240]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -39.0
+offset_right = 1922.0
+offset_bottom = 1041.0
+texture = ExtResource("24_17b70")
+
+[node name="VaccineArt" type="TextureRect" parent="." unique_id=870556505]
+layout_mode = 0
+offset_left = 2.0
+offset_top = -39.0
+offset_right = 1922.0
+offset_bottom = 1041.0
+texture = ExtResource("5_016ls")
+
+[node name="VaccineButton" type="Button" parent="." unique_id=327037012]
+layout_mode = 0
+offset_left = 747.0
+offset_top = 780.0
+offset_right = 1176.0
+offset_bottom = 914.0
+theme_override_styles/normal = SubResource("StyleBoxEmpty_0y1wb")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_i1dny")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_mk8m1")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_jodks")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_i6udw")
 
 [node name="StartGameSound" type="AudioStreamPlayer" parent="." unique_id=1712347803]
 stream = ExtResource("20_2a1eq")
