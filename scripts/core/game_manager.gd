@@ -978,9 +978,7 @@ func _make_ui_font() -> Font:
 	return HudStyle.make_ui_font()
 
 func _make_display_font() -> Font:
-	# reserved for the few "important" moments (day count, vaccine countdown) --
-	# everywhere else uses the condensed font from _make_ui_font() for legibility
-	return load("res://assets/Bangers-Regular.ttf")
+	return load("res://assets/Play-Regular.ttf")
 
 func _build_status_panel() -> void:
 	# one panel, one border/background -- four sections stacked in a single
