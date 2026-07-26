@@ -71,7 +71,7 @@ var is_transitioning := false
 var is_pressing_vaccine := false
 
 # showing scores
-const FONT: FontFile = preload("res://assets/Bangers-Regular.ttf")
+const FONT: FontFile = preload("res://assets/Play-Regular.ttf")
 const LOST_Y := 430
 const KILLED_Y := 520
 const CURED_Y = 610

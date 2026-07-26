@@ -989,17 +989,10 @@ func create_day_controls() -> void:
 	selection_pulse.tween_property(selection_highlight, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _make_ui_font() -> Font:
-	# condensed fonts read cramped at zero tracking -- FontVariation's glyph
-	# spacing adds real letter-spacing without needing a different typeface
-	var variation := FontVariation.new()
-	variation.base_font = load("res://assets/Coolvetica Rg.otf")
-	variation.spacing_glyph = 3
-	return variation
+	return load("res://assets/Play-Regular.ttf")
 
 func _make_display_font() -> Font:
-	# reserved for the few "important" moments (day count, vaccine countdown) --
-	# everywhere else uses the condensed font from _make_ui_font() for legibility
-	return load("res://assets/Bangers-Regular.ttf")
+	return load("res://assets/Play-Regular.ttf")
 
 func _build_status_panel() -> void:
 	# one panel, one border/background -- four sections stacked in a single
