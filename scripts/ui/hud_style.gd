@@ -5,14 +5,14 @@ extends RefCounted
 
 static func make_panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.13, 0.14, 0.16, 0.95)
+	style.bg_color = Palette.PANEL_BG
 	style.set_corner_radius_all(10)
 	style.corner_detail = 8
 	style.border_width_left = 1
 	style.border_width_right = 1
 	style.border_width_top = 1
 	style.border_width_bottom = 1
-	style.border_color = Color(0.24, 0.26, 0.30)
+	style.border_color = Palette.PANEL_BORDER
 	style.content_margin_left = 18
 	style.content_margin_right = 18
 	style.content_margin_top = 14
@@ -36,20 +36,20 @@ static func style_button(btn: Button, accent: Color) -> void:
 	normal.shadow_color = Color(0, 0, 0, 0.35)
 	normal.shadow_size = 4
 	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
+	btn.add_theme_color_override("font_color", Palette.BUTTON_TEXT)
 
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = accent.darkened(0.25)
 	hover.border_color = accent.lightened(0.2)
 	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	btn.add_theme_color_override("font_hover_color", Palette.TEXT_BONE)
 
 	var pressed := normal.duplicate() as StyleBoxFlat
 	pressed.bg_color = accent.darkened(0.6)
 	btn.add_theme_stylebox_override("pressed", pressed)
 
 	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.14, 0.14, 0.15)
-	disabled.border_color = Color(0.22, 0.22, 0.24)
+	disabled.bg_color = Palette.BUTTON_DISABLED_BG
+	disabled.border_color = Palette.BUTTON_DISABLED_BORDER
 	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.4, 0.42))
+	btn.add_theme_color_override("font_disabled_color", Palette.BUTTON_DISABLED_TEXT)

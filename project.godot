@@ -24,6 +24,7 @@ config/icon="res://icon.svg"
 GameResults="*uid://pvqgc24ac4il"
 Music="*res://scripts/core/music_player.gd"
 ClickSound="*res://scripts/core/click_sound.gd"
+Palette="*res://scripts/core/palette.gd"
 
 [display]
 

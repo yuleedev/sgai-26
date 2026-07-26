@@ -113,7 +113,10 @@ func _ready() -> void:
 	add_child(purchase_sound_player)
 
 func _make_ui_font() -> Font:
-	return load("res://assets/Play-Regular.ttf")
+	var variation := FontVariation.new()
+	variation.base_font = load("res://assets/Coolvetica Rg.otf")
+	variation.spacing_glyph = 3
+	return variation
 
 func _apply_theme() -> void:
 	bg_overlay.color = Color(0.03, 0.035, 0.045, 0.82)

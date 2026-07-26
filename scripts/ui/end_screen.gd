@@ -393,7 +393,7 @@ func setup_label(label: Label, text: String, y: float) -> void:
 	label.text = text
 	label.add_theme_font_override("font", FONT)
 	label.add_theme_font_size_override("font_size", 54)
-	label.add_theme_color_override("font_color", Color("f7edc5"))
+	label.add_theme_color_override("font_color", Palette.TEXT_BONE)  # same value as before, now shared via Palette
 	label.position = Vector2(0,y)
 	label.size = Vector2(1920,1080)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -460,7 +460,7 @@ func _style_export_button(btn: Button, accent: Color) -> void:
 	normal.shadow_color = Color(0, 0, 0, 0.35) # <-- shadow color/opacity
 	normal.shadow_size = 4                     # <-- shadow blur radius
 	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
+	btn.add_theme_color_override("font_color", Palette.TEXT_BONE)
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = accent.darkened(0.25)
 	hover.border_color = accent.lightened(0.2)

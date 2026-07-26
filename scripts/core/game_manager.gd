@@ -425,7 +425,7 @@ func _build_calendar_card(initial_day: int) -> Control:
 	if hud_font != null:
 		header_label.add_theme_font_override("font", hud_font)
 	header_label.add_theme_font_size_override("font_size", 22)
-	header_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.9))
+	header_label.add_theme_color_override("font_color", Palette.TEXT_BONE)
 	header.add_child(header_label)
 
 	var number_wrap := CenterContainer.new()
@@ -436,10 +436,9 @@ func _build_calendar_card(initial_day: int) -> Control:
 	number_label.text = "%d" % initial_day
 	number_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	number_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	if hud_font != null:
-		number_label.add_theme_font_override("font", hud_font)
+	number_label.add_theme_font_override("font", _make_display_font())  # same "important moment" font as the DAY value
 	number_label.add_theme_font_size_override("font_size", 96)
-	number_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
+	number_label.add_theme_color_override("font_color", Palette.TEXT_BONE)
 	number_wrap.add_child(number_label)
 
 	card.set_meta("day_label", number_label)
@@ -905,6 +904,11 @@ func buy_skill(skill: String, cost: int) -> bool:
 				clear_plus_button.text = "Clear+ ($%dK)" % reinforced_clear_fee
 		"rush_vaccine":
 			vaccine_unlock_day = 22
+			# buying this can retroactively put the game already past its own new
+			# deadline (e.g. bought on day 22+); re-check right away instead of
+			# waiting for the next day-transition to notice
+			if day >= vaccine_unlock_day:
+				check_ending()
 		"quarantine":
 			spread_multiplier = 0.5
 	var skill_names := {
@@ -976,7 +980,17 @@ func create_day_controls() -> void:
 	selection_pulse.tween_property(selection_highlight, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _make_ui_font() -> Font:
-	return load("res://assets/Play-Regular.ttf")
+	# condensed fonts read cramped at zero tracking -- FontVariation's glyph
+	# spacing adds real letter-spacing without needing a different typeface
+	var variation := FontVariation.new()
+	variation.base_font = load("res://assets/Coolvetica Rg.otf")
+	variation.spacing_glyph = 3
+	return variation
+
+func _make_display_font() -> Font:
+	# reserved for the few "important" moments (day count, vaccine countdown) --
+	# everywhere else uses the condensed font from _make_ui_font() for legibility
+	return load("res://assets/Bangers-Regular.ttf")
 
 func _build_status_panel() -> void:
 	# one panel, one border/background -- four sections stacked in a single
@@ -993,7 +1007,9 @@ func _build_status_panel() -> void:
 	panel.add_child(vbox)
 
 	# Section 1: Status
-	day_value = _add_stat_row(vbox, "DAY", Color(0.9, 0.9, 0.92))
+	day_value = _add_stat_row(vbox, "DAY", Palette.TEXT_BONE)
+	day_value.add_theme_font_override("font", _make_display_font())  # the one "important" value in this section
+	day_value.add_theme_font_size_override("font_size", 30)
 	funding_value = _add_stat_row(vbox, "FUNDING", Color(0.98, 0.78, 0.24))
 	doses_value = _add_stat_row(vbox, "DOSES", Color(0.55, 0.8, 1.0))
 	population_value = _add_stat_row(vbox, "POPULATION", Color(0.6, 0.88, 0.62))
@@ -1005,11 +1021,12 @@ func _build_status_panel() -> void:
 	if hud_font != null:
 		selection_header.add_theme_font_override("font", hud_font)
 	selection_header.add_theme_font_size_override("font_size", 22)
-	selection_header.add_theme_color_override("font_color", Color(0.9, 0.9, 0.92))
+	selection_header.add_theme_color_override("font_color", Palette.TEXT_BONE)
 	vbox.add_child(selection_header)
 
 	selection_no_cell_label = Label.new()
 	selection_no_cell_label.text = "No neighborhood selected"
+	selection_no_cell_label.add_theme_font_override("font", _make_ui_font())
 	selection_no_cell_label.add_theme_font_size_override("font_size", 18)
 	selection_no_cell_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.54))
 	vbox.add_child(selection_no_cell_label)
@@ -1024,10 +1041,12 @@ func _build_status_panel() -> void:
 	selection_dead_value = _add_stat_row(selection_stats_box, "DEAD", Color(0.69, 0.69, 0.69))
 
 	treat_preview_label = Label.new()
+	treat_preview_label.add_theme_font_override("font", _make_ui_font())
 	treat_preview_label.add_theme_font_size_override("font_size", 18)
 	selection_stats_box.add_child(treat_preview_label)
 
 	clear_preview_label = Label.new()
+	clear_preview_label.add_theme_font_override("font", _make_ui_font())
 	clear_preview_label.add_theme_font_size_override("font_size", 18)
 	selection_stats_box.add_child(clear_preview_label)
 
@@ -1043,13 +1062,12 @@ func _build_status_panel() -> void:
 
 	vbox.add_child(HSeparator.new())
 
-	# Section 4: Vaccine
+	# Section 4: Vaccine -- the other "important" moment, gets the same display font
 	var vaccine_label := Label.new()
 	vaccine_label.text = "VACCINE"
-	if hud_font != null:
-		vaccine_label.add_theme_font_override("font", hud_font)
-	vaccine_label.add_theme_font_size_override("font_size", 20)
-	vaccine_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.88))
+	vaccine_label.add_theme_font_override("font", _make_display_font())
+	vaccine_label.add_theme_font_size_override("font_size", 24)
+	vaccine_label.add_theme_color_override("font_color", Palette.TEXT_BONE)
 	vbox.add_child(vaccine_label)
 
 	vaccine_progress = ProgressBar.new()
@@ -1058,9 +1076,18 @@ func _build_status_panel() -> void:
 	vaccine_progress.step = 0.001
 	vaccine_progress.show_percentage = false
 	vaccine_progress.custom_minimum_size = Vector2(0, 18)
+	var vaccine_fill_style := StyleBoxFlat.new()
+	vaccine_fill_style.bg_color = Color(0.42, 0.68, 0.35)  # green -- rescue arriving, not pressure
+	vaccine_fill_style.set_corner_radius_all(4)
+	vaccine_progress.add_theme_stylebox_override("fill", vaccine_fill_style)
+	var vaccine_bg_style := StyleBoxFlat.new()
+	vaccine_bg_style.bg_color = Color(0.1, 0.11, 0.13)
+	vaccine_bg_style.set_corner_radius_all(4)
+	vaccine_progress.add_theme_stylebox_override("background", vaccine_bg_style)
 	vbox.add_child(vaccine_progress)
 
 	vaccine_days_label = Label.new()
+	vaccine_days_label.add_theme_font_override("font", _make_ui_font())  # caption text -- condensed font, not the display one
 	vaccine_days_label.add_theme_font_size_override("font_size", 16)
 	vaccine_days_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
 	vbox.add_child(vaccine_days_label)
@@ -1076,7 +1103,7 @@ func _add_stat_row(parent: Node, label_text: String, value_color: Color) -> Labe
 	if hud_font != null:
 		name_label.add_theme_font_override("font", hud_font)
 	name_label.add_theme_font_size_override("font_size", 22)
-	name_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
+	name_label.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 	row.add_child(name_label)
 
 	var value_label := Label.new()
@@ -1197,8 +1224,7 @@ func add_action_button(parent: Node, label: String, handler: Callable, accent: C
 	var button := Button.new()
 	button.text = label
 	button.custom_minimum_size = Vector2(0, 64)
-	if hud_font != null:
-		button.add_theme_font_override("font", hud_font)
+	button.add_theme_font_override("font", _make_ui_font())
 	button.add_theme_font_size_override("font_size", 30)
 	_style_hud_button(button, accent)
 	button.pressed.connect(handler)
