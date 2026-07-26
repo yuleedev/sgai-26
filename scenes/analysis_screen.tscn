@@ -1,7 +1,6 @@
+[gd_scene format=3 uid="uid://cepu8d74t12lb"]
 
-[gd_scene load_steps = 3 format=3 uid="uid://cepu8d74t12lb"]
-
-[ext_resource type="Script" path="res://scripts/ui/analysis_screen.gd" id="1_analysis"]
+[ext_resource type="Script" uid="uid://ca8sb84ysingj" path="res://scripts/ui/analysis_screen.gd" id="1_analysis"]
 [ext_resource type="Texture2D" uid="uid://bjbrdeagw3nfi" path="res://assets/start screen/background.png" id="2_background"]
 
 [node name="AnalysisScreen" type="Control" unique_id=765984175]

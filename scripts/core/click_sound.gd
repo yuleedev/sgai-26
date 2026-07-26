@@ -10,11 +10,13 @@ var hover_player: AudioStreamPlayer
 func _ready() -> void:
 	stream = CLICK
 	volume_db = CLICK_VOLUME_DB
+	bus = AudioSettings.SFX_BUS
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 	hover_player = AudioStreamPlayer.new()
 	hover_player.stream = HOVER
 	hover_player.volume_db = HOVER_VOLUME_DB
+	hover_player.bus = AudioSettings.SFX_BUS
 	hover_player.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(hover_player)
 

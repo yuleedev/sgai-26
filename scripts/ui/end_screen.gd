@@ -141,6 +141,8 @@ func _ready() -> void:
 
 
 	Music.play_track(TITLE_MUSIC, -10.0)
+	start_game_sound.bus = AudioSettings.SFX_BUS
+	arms_in_sound.bus = AudioSettings.SFX_BUS
 	start_game_sound.finished.connect(Music.fade_out)
 
 	# center pivots
@@ -565,11 +567,6 @@ func play_try_again_animation() -> void:
 func transition_fade() -> void:
 	is_transitioning = true
 	transition_to_scene("res://scenes/map_scene.tscn", true)
-
-func transition_to_scene(scene_path: String, begin_next_playthrough := false) -> void:
-	var fade_tween := create_tween()
-	fade_tween.tween_property(fade_overlay, "modulate:a", 1.0, 0.3)
-	await fade_tween.finished
 
 func transition_to_scene(scene_path: String, begin_next_playthrough := false) -> void:
 	var fade_tween := create_tween()

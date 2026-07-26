@@ -110,6 +110,7 @@ func _ready() -> void:
 
 	purchase_sound_player.stream = PURCHASE_SOUND
 	purchase_sound_player.volume_db = -18.0
+	purchase_sound_player.bus = AudioSettings.SFX_BUS
 	add_child(purchase_sound_player)
 
 func _make_ui_font() -> Font:

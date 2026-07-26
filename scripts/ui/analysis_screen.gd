@@ -1,6 +1,11 @@
 extends Control
 
 const STRATEGY_SCALE = preload("res://scripts/ui/strategy_scale.gd")
+
+const CREAM := Color("f7edc5")
+const MUTED := Color("aaa9ad")
+const PANEL := Color(0.09, 0.095, 0.11, 0.94)
+
 const TITLE_MUSIC := preload("res://assets/audio/startbgmusic.mp3")
 
 const SCALE_DEFINITIONS := [
