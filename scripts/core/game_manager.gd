@@ -77,6 +77,7 @@ var summary_path := ""
 var prev_total_dead := 0
 var prev_total_cured := 0
 var action_label: Label
+var playthrough_value: Label
 var day_value: Label
 var funding_value: Label
 var doses_value: Label
@@ -111,6 +112,18 @@ var action_panel: PanelContainer
 var skill_button_panel: PanelContainer
 var skill_preview_icons: Dictionary = {}  # icon_path -> {"node": TextureRect, "keys": Array[String]}
 var tutorial_ref: CanvasLayer
+var action_history: Array[String] = []
+var action_targets: Array[Dictionary] = []
+var upgrade_purchases: Array[Dictionary] = []
+var total_income_earned := 0
+var upgrade_spending := 0
+var clear_spending := 0
+var spread_events := 0
+var newly_infected_cells := 0
+var infected_timeline: Array[int] = []
+var infected_cells_timeline: Array[int] = []
+var high_infected_cells_timeline: Array[int] = []
+var severe_infected_cells_timeline: Array[int] = []
 const TUTORIAL_FLAG_PATH := "user://tutorial_seen"
 var risk_highlight_nodes: Array[Line2D] = []
 var risk_highlight_tweens: Array[Tween] = []
@@ -142,6 +155,7 @@ func _ready() -> void:
 	create_grid_frame()
 	zombie_cell = random_outer_cell()
 	seed_infection(zombie_cell, STARTING_ZOMBIES)
+	_capture_infection_snapshot()
 	update_all_cells()
 	update_risk_highlights()
 	set_player_cell()
@@ -383,6 +397,7 @@ func earn_money(amount: int) -> void:
 	money_changed.emit(money)
 	_update_skill_tree()
 
+
 var is_transitioning := false
 var tooltip_suppressed := false  # true only during the day-card flip (phase 4); tooltip stays available otherwise
 
@@ -507,6 +522,7 @@ func run_day_cycle(cell: Vector2i, icon_path: String, tint: Color, floater_text:
 	# Phase 4: day card -- day number flips, tooltip suppressed.
 	tooltip_suppressed = true
 	await play_day_transition()
+
 	day += 1
 	check_ending()
 	refresh_status()
@@ -605,11 +621,65 @@ func finish_game(people_lost: int) -> void:
 	GameResults.zombies_killed = total_zombies_killed
 	GameResults.zombies_cured = total_zombies_cured
 
+	GameResults.record_playthrough(_build_playthrough_result(people_lost))
+
+
 	GameResults.run_id = run_id
 	var music_fade := create_tween()
 	music_fade.tween_property(map_music, "volume_db", -40.0, 0.6)
 	await music_fade.finished
+
 	get_tree().change_scene_to_file(end_screen_path)
+
+func _build_playthrough_result(people_lost: int) -> Dictionary:
+	var total_dead := 0
+	for cell in cell_data:
+		if cell != BASE_CELL:
+			total_dead += int(cell_data[cell]["dead"])
+	return {
+		"playthrough": GameResults.playthrough_number,
+		"ending": ending_result,
+		"days_played": day,
+		"original_population": original_population,
+		"survivors": original_population - people_lost,
+		"disease_deaths": maxi(0, total_dead - total_zombies_killed),
+		"player_kills": total_zombies_killed,
+		"zombies_cured": total_zombies_cured,
+		"action_history": action_history.duplicate(),
+		"action_targets": action_targets.duplicate(true),
+		"upgrade_purchases": upgrade_purchases.duplicate(true),
+		"total_income": total_income_earned,
+		"upgrade_spending": upgrade_spending,
+		"clear_spending": clear_spending,
+		"spread_events": spread_events,
+		"newly_infected_cells": newly_infected_cells,
+		"infected_timeline": infected_timeline.duplicate(),
+		"infected_cells_timeline": infected_cells_timeline.duplicate(),
+		"high_infected_cells_timeline": high_infected_cells_timeline.duplicate(),
+		"severe_infected_cells_timeline": severe_infected_cells_timeline.duplicate(),
+		"outbreak_origin": zombie_cell,
+	}
+
+func _capture_infection_snapshot() -> void:
+	var total_infected := 0
+	var infected_cells := 0
+	var high_infected_cells := 0
+	var severe_infected_cells := 0
+	for cell in cell_data:
+		if cell == BASE_CELL:
+			continue
+		var infected: int = cell_data[cell]["infected"]
+		total_infected += infected
+		if infected >= INFECTED_LEVEL_THRESHOLDS[0]:
+			infected_cells += 1
+		if infected >= INFECTED_LEVEL_THRESHOLDS[1]:
+			high_infected_cells += 1
+		if infected >= INFECTED_LEVEL_THRESHOLDS[2]:
+			severe_infected_cells += 1
+	infected_timeline.append(total_infected)
+	infected_cells_timeline.append(infected_cells)
+	high_infected_cells_timeline.append(high_infected_cells)
+	severe_infected_cells_timeline.append(severe_infected_cells)
 
 func grow_infection() -> void:
 	for cell in cell_data:
@@ -652,26 +722,34 @@ func spread_infection() -> void:
 				SPREAD_CHANCE_CAP,
 			) * spread_multiplier
 			if randf() < chance:
+				var was_uninfected: bool = target_data["infected"] <= 0
 				var appear: int = min(SPREAD_INFECT_AMOUNT, target_data["healthy"])
 				target_data["healthy"] -= appear
 				target_data["infected"] += appear
+				if appear > 0:
+					spread_events += 1
+					if was_uninfected:
+						newly_infected_cells += 1
 
 func collect_income() -> void:
 	var total_healthy := 0
 	for cell in cell_data:
 		total_healthy += cell_data[cell]["healthy"]
-	earn_money(INCOME_PER_DAY + total_healthy / INCOME_PER_HEALTHY)
+	var income := INCOME_PER_DAY + int(total_healthy / INCOME_PER_HEALTHY)
+	total_income_earned += income
+	earn_money(income)
 
 func _run_simulation_phase(funding_before: int, population_before: int) -> void:
 	grow_infection()
 	spread_infection()
 	collect_income()
 	log_day_row()
+	_capture_infection_snapshot()
 	update_all_cells()
 	update_risk_highlights()
 	_tick_stat_label(funding_value, funding_before, money, func(v): return "$%dk" % v)
 	_tick_stat_label(population_value, population_before, living_population(), func(v): return "%d / %d" % [v, original_population])
-
+  
 func play_action_scan(cell: Vector2i, icon_path: String, tint: Color, add_impact_flash: bool = false) -> void:
 	# icon pops in with a bounce (instead of a flat fade), a soft radial ring pulses
 	# outward from the tile center, and a full-tile color wash wipes across left-to-right
@@ -800,6 +878,7 @@ func _on_treat_pressed() -> void:
 	var funding_before := money
 	var population_before := living_population()
 	var data := cell_data[selected_cell]
+	_record_targeted_action("TREAT", selected_cell, int(data["infected"]))
 	var cured: int = compute_action_amount(data["infected"], treat_cure_rate)
 	data["infected"] -= cured
 	data["cured"] += cured
@@ -842,15 +921,20 @@ func _on_clear_plus_pressed() -> void:
 	if money < reinforced_clear_fee:
 		set_last_action("Not enough funding for Reinforced Clear")
 		return
-	is_transitioning = true
+    
+  is_transitioning = true
 	var doses_before := doses
 	var funding_before := money
 	var population_before := living_population()
-	money -= reinforced_clear_fee
-	money_changed.emit(money)
-	_update_skill_tree()
+	if reinforced_clear_fee > 0:
+		money -= reinforced_clear_fee
+		clear_spending += reinforced_clear_fee
+		money_changed.emit(money)
+		_update_skill_tree()
 	var data := cell_data[selected_cell]
+	_record_targeted_action("CLEAR", selected_cell, int(data["infected"]))
 	var killed: int = compute_action_amount(data["infected"], REINFORCED_CLEAR_RATE)
+
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
@@ -863,7 +947,11 @@ func _on_clear_plus_pressed() -> void:
 func _on_wait_pressed() -> void:
 	if game_ended or is_transitioning:
 		return
+
+	action_history.append("WAIT")
+
 	is_transitioning = true
+
 	last_action_type = "WAIT"
 	last_action_cell = Vector2i(-1, -1)
 	set_last_action("Waited")
@@ -872,6 +960,15 @@ func _on_wait_pressed() -> void:
 func set_last_action(text: String) -> void:
 	if action_label != null:
 		action_label.text = text
+
+func _record_targeted_action(action: String, cell: Vector2i, infected_before: int) -> void:
+	action_history.append(action)
+	action_targets.append({
+		"action": action,
+		"cell": cell,
+		"infected_before": infected_before,
+		"infection_level": get_zombie_level(cell),
+	})
 
 func has_skill(skill: String) -> bool:
 	return skills.get(skill, false)
@@ -882,6 +979,7 @@ func buy_skill(skill: String, cost: int) -> bool:
 	if money < cost:
 		return false
 	money -= cost
+	upgrade_spending += cost
 	money_changed.emit(money)
 	_update_skill_tree()
 	skills[skill] = true
@@ -910,6 +1008,11 @@ func buy_skill(skill: String, cost: int) -> bool:
 				check_ending()
 		"quarantine":
 			spread_multiplier = 0.5
+	upgrade_purchases.append({
+		"key": skill,
+		"day": day,
+		"cost": cost,
+	})
 	var skill_names := {
 		"better_treatment_1": "Better Treatment I",
 		"better_treatment_2": "Better Treatment II",
@@ -995,10 +1098,12 @@ func _build_status_panel() -> void:
 	vbox.custom_minimum_size = Vector2(340, 0)
 	panel.add_child(vbox)
 
+  playthrough_value = _add_stat_row(vbox, "PLAYTHROUGH", Color(0.76, 0.68, 1.0))
 	# Section 1: Status
 	day_value = _add_stat_row(vbox, "DAY", Palette.TEXT_BONE)
-	day_value.add_theme_font_override("font", _make_display_font())  # the one "important" value in this section
+	day_value.add_theme_font_override("font", _make_display_font())
 	day_value.add_theme_font_size_override("font_size", 30)
+  
 	funding_value = _add_stat_row(vbox, "FUNDING", Color(0.98, 0.78, 0.24))
 	doses_value = _add_stat_row(vbox, "DOSES", Color(0.55, 0.8, 1.0))
 	population_value = _add_stat_row(vbox, "POPULATION", Color(0.6, 0.88, 0.62))
@@ -1383,6 +1488,9 @@ func compute_people_lost() -> int:
 func refresh_status() -> void:
 	if day_value == null:
 		return
+  
+	playthrough_value.text = "%d" % GameResults.playthrough_number
+  
 	day_value.text = "%d / %d" % [day, vaccine_unlock_day]
 	funding_value.text = "$%dk" % money
 	doses_value.text = "%d" % doses
