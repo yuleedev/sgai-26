@@ -6,6 +6,7 @@
 [ext_resource type="AudioStream" uid="uid://r4hi7ikspsqr" path="res://assets/audio/treat.mp3" id="4_clear_sfx"]
 [ext_resource type="AudioStream" uid="uid://gthxyy2l7jme" path="res://assets/audio/clearaction.mp3" id="5_clear_sfx"]
 [ext_resource type="Shader" path="res://shaders/background.gdshader" id="6_bg_shader"]
+[ext_resource type="AudioStream" path="res://assets/audio/glasswood_tactics.mp3" id="7_glasswood"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5m4q6"]
 texture = ExtResource("2_ne7uw")
@@ -53,7 +54,7 @@ tile_set = SubResource("TileSet_vlip3")
 [node name="UI" type="CanvasLayer" parent="." unique_id=1969089315]
 
 [node name="MapMusic" type="AudioStreamPlayer" parent="." unique_id=673821072]
-stream = ExtResource("3_5m4q6")
+stream = ExtResource("7_glasswood")
 volume_db = -20.0
 
 [node name="TreatSound" type="AudioStreamPlayer" parent="." unique_id=487980846]
