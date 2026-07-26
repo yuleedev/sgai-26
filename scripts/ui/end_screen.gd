@@ -198,9 +198,9 @@ func play_intro() -> void:
 	await animate_hands_intro()
 	
 	# show results
-	setup_label(people_lost, "People lost: %d" % GameResults.people_lost, LOST_Y)
-	setup_label(zombies_killed, "Zombies killed: %d" % GameResults.zombies_killed, KILLED_Y)
-	setup_label(zombies_cured, "Zombies cured: %d" % GameResults.zombies_cured, CURED_Y)
+	setup_label(people_lost, "Died of infection: %d" % GameResults.people_lost, LOST_Y)
+	setup_label(zombies_killed, "Killed: %d" % GameResults.zombies_killed, KILLED_Y)
+	setup_label(zombies_cured, "Cured: %d" % GameResults.zombies_cured, CURED_Y)
 	show_results()
 
 	if GameResults.run_id >= 3:

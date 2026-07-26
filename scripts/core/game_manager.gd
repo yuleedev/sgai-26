@@ -117,7 +117,9 @@ var risk_highlight_tweens: Array[Tween] = []
 
 const REINFORCED_CLEAR_RATE := 0.55
 var clear_plus_button: Button
-var reduced_growth_cells: Dictionary[Vector2i, bool] = {}  # treated cells get halved growth for exactly 1 day
+var contained_cells: Dictionary[Vector2i, float] = {}  # cell -> spread multiplier, set by Clear/Clear+
+var treated_cells: Dictionary[Vector2i, bool] = {}  # Treat's own cell, 1-day growth cut
+var ring_treated_cells: Dictionary[Vector2i, bool] = {}  # Treat's neighbors, smaller 1-day growth cut
 
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
@@ -623,9 +625,14 @@ func grow_infection() -> void:
 		# small counts forever (e.g. floor(2 * 0.30) == 0), which silently kills
 		# spread: a freshly-seeded neighbor cell could never grow past its seed.
 		var convert_rate := INFECT_CONVERT_RATE
-		if reduced_growth_cells.has(cell):
+		if contained_cells.has(cell):
+			convert_rate *= 0.5  # cleared by spread_infection() after it also reads this dict
+		elif treated_cells.has(cell):
 			convert_rate *= 0.5
-			reduced_growth_cells.erase(cell)
+			treated_cells.erase(cell)
+		elif ring_treated_cells.has(cell):
+			convert_rate *= 0.8
+			ring_treated_cells.erase(cell)
 		var growth: int = max(1, int(floor(infected * convert_rate)))
 		var converted: int = min(growth, data["healthy"])
 		var died: int = min(int(floor(infected * INFECT_DEATH_RATE)), infected)
@@ -641,6 +648,7 @@ func spread_infection() -> void:
 		var infected: int = source_infected[cell]
 		if infected <= 0:
 			continue
+		var seal_strength: float = contained_cells.get(cell, 1.0)
 		for offset in NEIGHBOR_OFFSETS:
 			var target := cell + offset
 			if not cell_data.has(target) or target == BASE_CELL:
@@ -650,11 +658,12 @@ func spread_infection() -> void:
 			var chance: float = min(
 				infected * SPREAD_CHANCE_PER_INFECTED * (target_population / 100.0),
 				SPREAD_CHANCE_CAP,
-			) * spread_multiplier
+			) * spread_multiplier * seal_strength
 			if randf() < chance:
 				var appear: int = min(SPREAD_INFECT_AMOUNT, target_data["healthy"])
 				target_data["healthy"] -= appear
 				target_data["infected"] += appear
+	contained_cells.clear()
 
 func collect_income() -> void:
 	var total_healthy := 0
@@ -805,7 +814,11 @@ func _on_treat_pressed() -> void:
 	data["cured"] += cured
 	total_zombies_cured += cured
 	doses -= 1
-	reduced_growth_cells[selected_cell] = true
+	treated_cells[selected_cell] = true
+	for offset in NEIGHBOR_OFFSETS:
+		var neighbor := selected_cell + offset
+		if cell_data.has(neighbor) and neighbor != BASE_CELL:
+			ring_treated_cells[neighbor] = true
 	last_action_type = "TREAT"
 	last_action_cell = selected_cell
 	treat_sound.play()
@@ -827,6 +840,7 @@ func _on_clear_pressed() -> void:
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
+	contained_cells[selected_cell] = 0.5
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	clear_sound.play()
@@ -854,6 +868,7 @@ func _on_clear_plus_pressed() -> void:
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
+	contained_cells[selected_cell] = 0.15
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	clear_sound.play()
@@ -1371,14 +1386,13 @@ func compute_action_amount(infected: int, rate: float) -> int:
 	return min(int(floor(infected * rate)), infected)
 
 func compute_people_lost() -> int:
-	# same formula used at game-end (check_ending()) and live in the HUD's
-	# outbreak-totals line, so both always agree with each other
-	var lost := 0
+	# dead_total includes Clear kills too, so subtract those back out for disease-only deaths
+	var dead_total := 0
 	for cell in cell_data:
 		if cell == BASE_CELL:
 			continue
-		lost += cell_data[cell]["infected"] + cell_data[cell]["dead"]
-	return lost
+		dead_total += cell_data[cell]["dead"]
+	return dead_total - total_zombies_killed
 
 func refresh_status() -> void:
 	if day_value == null:
@@ -1396,7 +1410,7 @@ func refresh_status() -> void:
 func _update_outbreak_totals() -> void:
 	if outbreak_totals_value == null:
 		return
-	outbreak_totals_value.text = "Lost %d · Killed %d · Cured %d" % [compute_people_lost(), total_zombies_killed, total_zombies_cured]
+	outbreak_totals_value.text = "Died %d · Killed %d · Cured %d" % [compute_people_lost(), total_zombies_killed, total_zombies_cured]
 
 func _update_vaccine_section() -> void:
 	if vaccine_progress == null:
