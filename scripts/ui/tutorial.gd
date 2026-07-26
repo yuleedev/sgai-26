@@ -3,10 +3,8 @@ extends CanvasLayer
 signal finished
 
 const DIM_COLOR := Color(0, 0, 0, 0.74)
-const HIGHLIGHT_COLOR := Color(0.79, 0.35, 0.36)
-const TITLE_COLOR := Color(0.87, 0.48, 0.48)
+const HIGHLIGHT_COLOR := Color(0.79, 0.35, 0.36)  # spotlight-rect only, not panel/text chrome
 const HIGHLIGHT_PAD := 12.0
-const CORNER_RADIUS := 10.0
 const TOOLTIP_WIDTH := 400.0
 const TOOLTIP_WIDTH_MEDIUM := 540.0
 const TOOLTIP_WIDTH_WIDE := 660.0
@@ -56,7 +54,7 @@ func setup(step_list: Array) -> void:
 
 func _ready() -> void:
 	layer = 100
-	ui_font = load("res://assets/Play-Regular.ttf")
+	ui_font = HudStyle.make_ui_font()
 	_build_dimmer()
 	_build_tooltip()
 	if steps.is_empty():
@@ -107,14 +105,14 @@ func _build_tooltip() -> void:
 	if ui_font != null:
 		step_label.add_theme_font_override("font", ui_font)
 	step_label.add_theme_font_size_override("font_size", 18)
-	step_label.add_theme_color_override("font_color", Color(0.55, 0.56, 0.6))
+	step_label.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 	vbox.add_child(step_label)
 
 	title_label = Label.new()
 	if ui_font != null:
 		title_label.add_theme_font_override("font", ui_font)
 	title_label.add_theme_font_size_override("font_size", 32)
-	title_label.add_theme_color_override("font_color", TITLE_COLOR)
+	title_label.add_theme_color_override("font_color", Palette.TEXT_BONE)
 	vbox.add_child(title_label)
 
 	body_label = RichTextLabel.new()
@@ -126,7 +124,7 @@ func _build_tooltip() -> void:
 		body_label.add_theme_font_override("normal_font", ui_font)
 		body_label.add_theme_font_override("bold_font", ui_font)
 	body_label.add_theme_font_size_override("normal_font_size", 23)
-	body_label.add_theme_color_override("default_color", Color(0.82, 0.82, 0.86))
+	body_label.add_theme_color_override("default_color", Palette.TEXT_BONE)
 	body_label.add_theme_constant_override("line_separation", 5)
 	body_label.custom_minimum_size = Vector2(TOOLTIP_WIDTH, 0)
 	vbox.add_child(body_label)
@@ -142,7 +140,7 @@ func _build_tooltip() -> void:
 	if ui_font != null:
 		skip_button.add_theme_font_override("font", ui_font)
 	skip_button.add_theme_font_size_override("font_size", 20)
-	_style_button(skip_button, Color(0.40, 0.42, 0.48))
+	HudStyle.style_button(skip_button, Palette.NEUTRAL_BUTTON_FILL)
 	skip_button.pressed.connect(_finish)
 	buttons.add_child(skip_button)
 
@@ -152,48 +150,12 @@ func _build_tooltip() -> void:
 	if ui_font != null:
 		next_button.add_theme_font_override("font", ui_font)
 	next_button.add_theme_font_size_override("font_size", 22)
-	_style_button(next_button, Color(0.79, 0.35, 0.36))
+	HudStyle.style_button(next_button, Palette.TREAT_BUTTON_FILL)
 	next_button.pressed.connect(_on_next_pressed)
 	buttons.add_child(next_button)
 
 func _tooltip_style() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.13, 0.14, 0.16, 0.98)
-	sb.set_corner_radius_all(12)
-	sb.corner_detail = 8
-	sb.set_border_width_all(2)
-	sb.border_color = HIGHLIGHT_COLOR
-	sb.content_margin_left = 24
-	sb.content_margin_right = 24
-	sb.content_margin_top = 20
-	sb.content_margin_bottom = 20
-	sb.shadow_color = Color(0, 0, 0, 0.55)
-	sb.shadow_size = 14
-	return sb
-
-func _style_button(btn: Button, accent: Color) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = accent.darkened(0.45)
-	normal.set_corner_radius_all(8)
-	normal.corner_detail = 6
-	normal.set_border_width_all(2)
-	normal.border_color = accent
-	normal.content_margin_left = 14
-	normal.content_margin_right = 14
-	normal.content_margin_top = 6
-	normal.content_margin_bottom = 6
-	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_color_override("font_color", Color(0.95, 0.95, 0.96))
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = accent.darkened(0.25)
-	hover.border_color = accent.lightened(0.2)
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_color_override("font_hover_color", Color.WHITE)
-
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = accent.darkened(0.6)
-	btn.add_theme_stylebox_override("pressed", pressed)
+	return HudStyle.make_panel_style(HudStyle.AccentEdge.BORDERED)
 
 func _show_step(index: int, animate := true) -> void:
 	if animate:

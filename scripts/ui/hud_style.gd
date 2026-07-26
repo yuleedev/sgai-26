@@ -14,17 +14,23 @@ static func make_panel_style(accent_edge: AccentEdge = AccentEdge.BORDERED) -> S
 	style.content_margin_top = 16
 	style.content_margin_bottom = 16
 	if accent_edge == AccentEdge.BORDERED:
-		style.set_border_width_all(2)
+		style.set_border_width_all(1)
 		style.border_color = Palette.ACCENT_EDGE
-	style.shadow_color = Color(0, 0, 0, 0.35)
-	style.shadow_size = 8
 	return style
+
+static func make_ui_font() -> Font:
+	# the one shared body/label font, used everywhere except the few "display"
+	# moments (day count, vaccine countdown) that intentionally use Bangers instead
+	var variation := FontVariation.new()
+	variation.base_font = load("res://assets/Coolvetica Rg.otf")
+	variation.spacing_glyph = 3  # condensed fonts read cramped at zero tracking
+	return variation
 
 static func style_button(btn: Button, fill_color: Color) -> void:
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = fill_color
 	normal.set_corner_radius_all(0)
-	normal.set_border_width_all(2)
+	normal.set_border_width_all(1)
 	normal.border_color = Palette.ACCENT_EDGE
 	normal.content_margin_top = 8
 	normal.content_margin_bottom = 8

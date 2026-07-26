@@ -47,12 +47,8 @@ const CLEAR_COLOR := Color(0.66, 0.38, 0.38)
 const CLEAR_PLUS_ACCENT := Color(0.72, 0.46, 0.30)
 const WAIT_ACCENT := Color(0.40, 0.42, 0.48)
 const KILL_TEXT_COLOR := Color(1.0, 0.36, 0.36)
-
-# button fill colors specifically -- desaturated versions distinct from the
-# brighter scan-tint/floating-text colors above, per the panel restyle pass
-const TREAT_BUTTON_FILL := Color("5C7A3A")
-const CLEAR_BUTTON_FILL := Color("8A4038")
-const WAIT_BUTTON_FILL := Color("3A423C")
+# button fill colors (TREAT/CLEAR/WAIT) now live in Palette.gd, shared with
+# every other screen's buttons rather than being local to this file
 
 const SkillTreeScript := preload("res://scripts/ui/skill_tree.gd")  # lets us read SKILLS without instantiating the tree
 
@@ -196,13 +192,7 @@ func fade_in() -> void:
 	add_child(layer)
 	var overlay := ColorRect.new()
 	overlay.color = Color.BLACK
-	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(overlay)
-	var tween := create_tween()
-	tween.tween_property(overlay, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(layer.queue_free)
-
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT) 
 func ensure_log_headers() -> void:
 	if not FileAccess.file_exists(log_path):
 		var f := FileAccess.open(log_path, FileAccess.WRITE)
@@ -243,7 +233,7 @@ func create_grid_frame() -> void:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Palette.BOARD_FRAME_BG
 	sb.set_corner_radius_all(0)
-	sb.set_border_width_all(2)
+	sb.set_border_width_all(1)
 	sb.border_color = Palette.ACCENT_EDGE
 	sb.content_margin_left = 16
 	sb.content_margin_right = 16
@@ -268,8 +258,8 @@ func create_grid_lines() -> void:
 func _add_grid_line(from: Vector2, to: Vector2) -> void:
 	var line := Line2D.new()
 	line.points = PackedVector2Array([from, to])
-	line.width = 3.0
-	line.default_color = Color(0.03, 0.02, 0.03, 0.55)
+	line.width = 2.0
+	line.default_color = Palette.TILE_GAP
 	line.z_index = 2
 	add_child(line)
 
@@ -367,8 +357,8 @@ func update_risk_highlights() -> void:
 		var corner := grid.position + Vector2(cell.x * TILE_PX, cell.y * TILE_PX)
 		var outline := Line2D.new()
 		outline.width = 3.0
-		outline.default_color = Palette.HIGHLIGHT_BONE
-		outline.z_index = 6
+		outline.default_color = Palette.SPREAD_PREDICTION_COLOR  # solid, softer via lower opacity
+		outline.z_index = 6                                       # instead of a dash texture, which
 		outline.closed = true  # lets the engine miter-join the corner properly, instead of
 		outline.points = PackedVector2Array([  # manually repeating the first point, which leaves a seam
 			corner + Vector2(8, 8),
@@ -975,26 +965,17 @@ func create_day_controls() -> void:
 	_build_status_panel()
 	_build_right_hud()
 	selection_highlight = Line2D.new()
-	selection_highlight.width = 3.0
+	selection_highlight.width = 4.0
 	selection_highlight.default_color = Palette.HIGHLIGHT_BONE
 	selection_highlight.visible = false
 	selection_highlight.z_index = 5
 	selection_highlight.closed = true
 	add_child(selection_highlight)
-	# same pulse cadence as the risk outlines, so the two don't look like two
-	# different visual languages next to each other
-	var selection_pulse := create_tween()
-	selection_pulse.set_loops()
-	selection_pulse.tween_property(selection_highlight, "modulate:a", 0.6, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	selection_pulse.tween_property(selection_highlight, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# solid and static on purpose -- "I clicked here" should read as neutral/crisp,
+	# not urgent, which is what the at-risk outline's pulsing dashed red is for
 
 func _make_ui_font() -> Font:
-	# condensed fonts read cramped at zero tracking -- FontVariation's glyph
-	# spacing adds real letter-spacing without needing a different typeface
-	var variation := FontVariation.new()
-	variation.base_font = load("res://assets/Coolvetica Rg.otf")
-	variation.spacing_glyph = 3
-	return variation
+	return HudStyle.make_ui_font()
 
 func _make_display_font() -> Font:
 	# reserved for the few "important" moments (day count, vaccine countdown) --
@@ -1009,6 +990,7 @@ func _build_status_panel() -> void:
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
 	$UI.add_child(panel)
 	status_panel = panel
+	_add_panel_grain(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
@@ -1137,6 +1119,16 @@ func _make_hud_separator() -> HSeparator:
 func _make_hud_panel_style(accent_edge: HudStyle.AccentEdge = HudStyle.AccentEdge.NONE) -> StyleBoxFlat:
 	return HudStyle.make_panel_style(accent_edge)
 
+func _add_panel_grain(panel: PanelContainer) -> void:
+	# PanelContainer gives every child the same full content rect, so this just
+	# overlays the panel's existing background/border with fine noise texture
+	var grain := ColorRect.new()
+	grain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var material := ShaderMaterial.new()
+	material.shader = load("res://shaders/panel_grain.gdshader")
+	grain.material = material
+	panel.add_child(grain)
+
 func _build_right_hud() -> void:
 	# one VBoxContainer owns both blocks now, so width and right-margin are set
 	# once here instead of independently on each panel (which is what let them
@@ -1164,6 +1156,7 @@ func _build_skill_panel_block() -> PanelContainer:
 	panel.size_flags_horizontal = Control.SIZE_FILL
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
 	skill_button_panel = panel
+	_add_panel_grain(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
@@ -1176,7 +1169,7 @@ func _build_skill_panel_block() -> PanelContainer:
 	if hud_font != null:
 		button.add_theme_font_override("font", hud_font)
 	button.add_theme_font_size_override("font_size", 22)
-	_style_hud_button(button, WAIT_BUTTON_FILL)  # #3A423C, matches the action buttons per the restyle spec
+	_style_hud_button(button, Palette.NEUTRAL_BUTTON_FILL)  # matches the action buttons per the restyle spec
 	button.pressed.connect(_on_skills_pressed)
 	vbox.add_child(button)
 
@@ -1240,12 +1233,12 @@ func _refresh_skill_preview() -> void:
 
 func _make_level_pip() -> Panel:
 	var pip := Panel.new()
-	pip.custom_minimum_size = Vector2(5, 5)
+	pip.custom_minimum_size = Vector2(7, 7)
 	return pip
 
 func _update_level_pip(pip: Panel, owned: bool) -> void:
 	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(3)
+	style.set_corner_radius_all(4)
 	if owned:
 		style.bg_color = Palette.ICON_TINT
 	else:
@@ -1260,6 +1253,7 @@ func _build_action_panel_block() -> PanelContainer:
 	panel.size_flags_horizontal = Control.SIZE_FILL
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
 	action_panel = panel
+	_add_panel_grain(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
@@ -1274,11 +1268,11 @@ func _build_action_panel_block() -> PanelContainer:
 	header.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
 	vbox.add_child(header)
 
-	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, TREAT_BUTTON_FILL)
-	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, CLEAR_BUTTON_FILL)
+	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, Palette.TREAT_BUTTON_FILL)
+	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, Palette.CLEAR_BUTTON_FILL)
 	clear_plus_button = add_action_button(vbox, "Clear+", _on_clear_plus_pressed, CLEAR_PLUS_ACCENT)
 	clear_plus_button.visible = has_skill("reinforced_clear")
-	add_action_button(vbox, "Wait", _on_wait_pressed, WAIT_BUTTON_FILL)
+	add_action_button(vbox, "Wait", _on_wait_pressed, Palette.NEUTRAL_BUTTON_FILL)
 	return panel
 
 func add_action_button(parent: Node, label: String, handler: Callable, accent: Color) -> Button:

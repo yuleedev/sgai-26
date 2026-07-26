@@ -113,10 +113,7 @@ func _ready() -> void:
 	add_child(purchase_sound_player)
 
 func _make_ui_font() -> Font:
-	var variation := FontVariation.new()
-	variation.base_font = load("res://assets/Coolvetica Rg.otf")
-	variation.spacing_glyph = 3
-	return variation
+	return HudStyle.make_ui_font()
 
 func _apply_theme() -> void:
 	bg_overlay.color = Color(0.03, 0.035, 0.045, 0.82)
@@ -128,26 +125,26 @@ func _apply_theme() -> void:
 	panel_bg.content_margin_bottom = 26
 	panel.add_theme_stylebox_override("panel", panel_bg)
 
-	panel.add_theme_color_override("font_color", Color(0.88, 0.88, 0.88))
+	panel.add_theme_color_override("font_color", Palette.TEXT_BONE)
 
 	var title := $Panel/MainVBox/Header/Title as Label
 	if title != null and _ui_font != null:
 		title.add_theme_font_override("font", _ui_font)
 		title.add_theme_font_size_override("font_size", 32)
-		title.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+		title.add_theme_color_override("font_color", Palette.TEXT_BONE)
 
 	money_label.add_theme_font_override("font", _ui_font)
 	money_label.add_theme_font_size_override("font_size", 32)
 	money_label.add_theme_color_override("font_color", Color(0.95, 0.75, 0.2))
 
-	detail_hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	detail_hint.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 	detail_hint.add_theme_font_size_override("font_size", 16)
 
 	detail_name.add_theme_font_override("font", _ui_font)
 	detail_name.add_theme_font_size_override("font_size", 22)
-	detail_name.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	detail_name.add_theme_color_override("font_color", Palette.TEXT_BONE)
 
-	detail_desc.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	detail_desc.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 	detail_desc.add_theme_font_size_override("font_size", 14)
 
 	detail_cost.add_theme_font_override("font", _ui_font)
@@ -156,7 +153,7 @@ func _apply_theme() -> void:
 
 	detail_purchased.add_theme_font_override("font", _ui_font)
 	detail_purchased.add_theme_font_size_override("font_size", 20)
-	detail_purchased.add_theme_color_override("font_color", Color(0.3, 0.9, 0.3))
+	detail_purchased.add_theme_color_override("font_color", Palette.VACCINE_FILL)  # same "owned/complete" green as the vaccine bar fill
 
 	detail_buy_button.add_theme_font_override("font", _ui_font)
 	detail_buy_button.add_theme_font_size_override("font_size", 18)
@@ -164,8 +161,8 @@ func _apply_theme() -> void:
 	close_button.add_theme_font_override("font", _ui_font)
 	close_button.add_theme_font_size_override("font_size", 18)
 
-	HudStyle.style_button(detail_buy_button, Color(0.44, 0.42, 0.58))
-	HudStyle.style_button(close_button, Color(0.44, 0.42, 0.58))
+	HudStyle.style_button(detail_buy_button, Palette.TREAT_BUTTON_FILL)
+	HudStyle.style_button(close_button, Palette.NEUTRAL_BUTTON_FILL)
 
 	detail_content.add_theme_constant_override("separation", 12)
 	detail_panel.add_theme_constant_override("separation", 12)
@@ -175,15 +172,8 @@ func _apply_theme() -> void:
 	detail_buy_button.custom_minimum_size = Vector2(0, 44)
 	close_button.custom_minimum_size = Vector2(120, 44)
 
-	var detail_card := StyleBoxFlat.new()
-	detail_card.bg_color = Color(0.05, 0.05, 0.06, 0.6)
-	detail_card.set_corner_radius_all(8)
-	detail_card.corner_detail = 8
-	detail_card.border_width_left = 1
-	detail_card.border_width_right = 1
-	detail_card.border_width_top = 1
-	detail_card.border_width_bottom = 1
-	detail_card.border_color = Color(0.2, 0.2, 0.22)
+	var detail_card := HudStyle.make_panel_style(HudStyle.AccentEdge.BORDERED)
+	detail_card.bg_color = Palette.BOARD_FRAME_BG  # a shade darker than the main panel, so it still reads as "nested inside" it
 	detail_card.content_margin_left = 20
 	detail_card.content_margin_right = 20
 	detail_card.content_margin_top = 20
@@ -335,7 +325,7 @@ func build_visual_tree() -> void:
 		if _ui_font != null:
 			name_label.add_theme_font_override("font", _ui_font)
 		name_label.add_theme_font_size_override("font_size", 17)
-		name_label.add_theme_color_override("font_color", Color(0.78, 0.78, 0.82))
+		name_label.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 		visual_tree.add_child(name_label)
 
 	update_node_colors()
