@@ -3,7 +3,7 @@ extends CanvasLayer
 signal finished
 
 const DIM_COLOR := Color(0, 0, 0, 0.74)
-const HIGHLIGHT_COLOR := Color(0.79, 0.35, 0.36)  # spotlight-rect only, not panel/text chrome
+const HIGHLIGHT_COLOR := Color("F0EDC4")  # spotlight-rect only, not panel/text chrome -- same value as Palette.HIGHLIGHT_BONE
 const HIGHLIGHT_PAD := 12.0
 const TOOLTIP_WIDTH := 400.0
 const TOOLTIP_WIDTH_MEDIUM := 540.0
