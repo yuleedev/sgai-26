@@ -1,8 +1,5 @@
 extends Control
 
-const FONT: FontFile = preload("res://assets/Play-Regular.ttf")
-const CREAM := Color("f7edc5")
-const MUTED := Color("9b9ba3")
 const TRACK := Color("51545d")
 const SCALE_BG := Color(0.12, 0.125, 0.14, 0.55)
 const PLAYTHROUGH_COLORS: Array[Color] = [
@@ -17,6 +14,12 @@ var right_label := ""
 var overall_value := 0.0
 var playthrough_values: Array[float] = []
 var show_playthroughs := false
+var _font: Font
+
+func _get_font() -> Font:
+	if _font == null:
+		_font = HudStyle.make_ui_font()
+	return _font
 
 func setup(title: String, left: String, right: String, overall: float, values: Array[float], show_pts := false) -> void:
 	scale_title = title
@@ -33,12 +36,13 @@ func _notification(what: int) -> void:
 		queue_redraw()
 
 func _draw() -> void:
+	var font := _get_font()
 	var track_start := 184.0
 	var track_end := size.x - 22.0
-	draw_string(FONT, Vector2(0, 25), scale_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 25, CREAM)
-	draw_string(FONT, Vector2(track_start, 49), left_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, MUTED)
-	var right_width := FONT.get_string_size(right_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-	draw_string(FONT, Vector2(track_end - right_width, 49), right_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, MUTED)
+	draw_string(font, Vector2(0, 25), scale_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Palette.TEXT_BONE)
+	draw_string(font, Vector2(track_start, 49), left_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.TEXT_BONE_MUTED)
+	var right_width := font.get_string_size(right_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	draw_string(font, Vector2(track_end - right_width, 49), right_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Palette.TEXT_BONE_MUTED)
 
 	var pt_count := playthrough_values.size()
 	var lane_y = [65.0]
@@ -54,9 +58,9 @@ func _draw() -> void:
 	draw_style_box(bg_style, bg_rect)
 	for i in range(lane_y.size()):
 		var y: float = lane_y[i]
-		draw_string(FONT, Vector2(0, y + 6), lane_labels[i], HORIZONTAL_ALIGNMENT_LEFT, 48, 17, MUTED)
+		draw_string(font, Vector2(0, y + 6), lane_labels[i], HORIZONTAL_ALIGNMENT_LEFT, 48, 17, Palette.TEXT_BONE_MUTED)
 		draw_line(Vector2(track_start, y), Vector2(track_end, y), TRACK, 3.0)
-		draw_line(Vector2((track_start + track_end) / 2.0, y - 5), Vector2((track_start + track_end) / 2.0, y + 5), MUTED, 1.0)
+		draw_line(Vector2((track_start + track_end) / 2.0, y - 5), Vector2((track_start + track_end) / 2.0, y + 5), Palette.TEXT_BONE_MUTED, 1.0)
 
 	var overall_x := _value_position(overall_value, track_start, track_end)
 	var diamond := PackedVector2Array([
@@ -65,7 +69,7 @@ func _draw() -> void:
 		Vector2(overall_x, lane_y[0] + 8),
 		Vector2(overall_x - 8, lane_y[0]),
 	])
-	draw_colored_polygon(diamond, CREAM)
+	draw_colored_polygon(diamond, Palette.TEXT_BONE)
 
 	if show_playthroughs:
 		var color_count := PLAYTHROUGH_COLORS.size()

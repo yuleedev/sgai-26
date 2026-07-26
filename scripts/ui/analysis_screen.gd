@@ -1,11 +1,11 @@
 extends Control
 
-const DISPLAY_FONT: FontFile = preload("res://assets/Bangers-Regular.ttf")
-const UI_FONT: FontFile = preload("res://assets/Play-Regular.ttf")
 const STRATEGY_SCALE = preload("res://scripts/ui/strategy_scale.gd")
+
 const CREAM := Color("f7edc5")
 const MUTED := Color("aaa9ad")
 const PANEL := Color(0.09, 0.095, 0.11, 0.94)
+
 const TITLE_MUSIC := preload("res://assets/audio/startbgmusic.mp3")
 
 const SCALE_DEFINITIONS := [
@@ -34,13 +34,19 @@ var results: Array[Dictionary] = []
 var scale_scores: Dictionary = {}
 var scale_rows: Array = []
 var scale_dropdown: OptionButton
+var ui_font: Font
 
 func _ready() -> void:
 	for result in GameResults.playthrough_results:
 		results.append(result)
+	ui_font = HudStyle.make_ui_font()
 	Music.play_track(TITLE_MUSIC, -10.0)
-	_style_accent_button(close_game_button, 34)
-	_style_accent_button(main_menu_button, 34)
+	HudStyle.style_button(close_game_button, Palette.NEUTRAL_BUTTON_FILL)
+	HudStyle.style_button(main_menu_button, Palette.NEUTRAL_BUTTON_FILL)
+	close_game_button.add_theme_font_override("font", ui_font)
+	close_game_button.add_theme_font_size_override("font_size", 34)
+	main_menu_button.add_theme_font_override("font", ui_font)
+	main_menu_button.add_theme_font_size_override("font_size", 34)
 	close_game_button.pressed.connect(_on_close_game_pressed)
 	main_menu_button.pressed.connect(_on_main_menu_pressed)
 	scrim.modulate.a = 1.0
@@ -71,7 +77,7 @@ func _build_report() -> void:
 	page.add_theme_constant_override("separation", 18)
 	margin.add_child(page)
 
-	var title := _make_label("RESULTS", 54, CREAM, DISPLAY_FONT)
+	var title := _make_label("RESULTS", 54, Palette.TEXT_BONE)
 	page.add_child(title)
 
 	var stats_panel := _make_panel()
@@ -100,10 +106,10 @@ func _build_stats_table(panel: PanelContainer) -> void:
 	grid.add_theme_constant_override("h_separation", 24)
 	grid.add_theme_constant_override("v_separation", 7)
 	panel.add_child(grid)
-	grid.add_child(_make_label("OUTCOMES", 20, CREAM, UI_FONT, 285))
+	grid.add_child(_make_label("OUTCOMES", 20, Palette.TEXT_BONE, 285))
 	for i in range(results.size()):
-		grid.add_child(_make_label("P%d" % [i + 1], 20, CREAM, UI_FONT, 205))
-	grid.add_child(_make_label("TOTAL", 20, CREAM, UI_FONT, 205))
+		grid.add_child(_make_label("P%d" % [i + 1], 20, Palette.TEXT_BONE, 205))
+	grid.add_child(_make_label("TOTAL", 20, Palette.TEXT_BONE, 205))
 
 	_add_stat_row(grid, "ZOMBIES KILLED BY DISEASE", "disease_deaths")
 	_add_stat_row(grid, "ZOMBIES KILLED BY PLAYER", "player_kills")
@@ -111,7 +117,7 @@ func _build_stats_table(panel: PanelContainer) -> void:
 	_add_stat_row(grid, "HEALTHY REMAINING", "survivors")
 
 func _add_stat_row(grid: GridContainer, label_text: String, key: String) -> void:
-	grid.add_child(_make_label(label_text, 20, MUTED, UI_FONT, 285))
+	grid.add_child(_make_label(label_text, 20, Palette.TEXT_BONE_MUTED, 285))
 	var total_value := 0
 	var total_population := 0
 	for result in results:
@@ -119,9 +125,9 @@ func _add_stat_row(grid: GridContainer, label_text: String, key: String) -> void
 		total_value += value
 		total_population += int(result.get("original_population", 0))
 		var text := "%d / %d" % [value, result.get("original_population", 0)] if key == "survivors" else str(value)
-		grid.add_child(_make_label(text, 22, MUTED, UI_FONT, 205))
+		grid.add_child(_make_label(text, 22, Palette.TEXT_BONE_MUTED, 205))
 	var total_text := "%d / %d" % [total_value, total_population] if key == "survivors" else str(total_value)
-	grid.add_child(_make_label(total_text, 22, CREAM, UI_FONT, 205))
+	grid.add_child(_make_label(total_text, 22, Palette.TEXT_BONE, 205))
 
 func _build_scales(panel: PanelContainer) -> void:
 	var section := VBoxContainer.new()
@@ -129,7 +135,7 @@ func _build_scales(panel: PanelContainer) -> void:
 	panel.add_child(section)
 	var header := HBoxContainer.new()
 	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(_make_label("STRATEGY ANALYSIS", 30, CREAM, DISPLAY_FONT))
+	header.add_child(_make_label("STRATEGY ANALYSIS", 30, Palette.TEXT_BONE))
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
@@ -168,23 +174,23 @@ func _on_scale_view_changed(index: int) -> void:
 		row.queue_redraw()
 
 func _style_dropdown(dropdown: OptionButton) -> void:
-	dropdown.add_theme_font_override("font", UI_FONT)
+	dropdown.add_theme_font_override("font", ui_font)
 	dropdown.add_theme_font_size_override("font_size", 20)
-	dropdown.add_theme_color_override("font_color", CREAM)
-	dropdown.add_theme_color_override("font_hover_color", Color("2b2620"))
-	dropdown.add_theme_color_override("font_hover_pressed_color", Color("2b2620"))
-	dropdown.add_theme_color_override("font_pressed_color", Color("2b2620"))
-	dropdown.add_theme_color_override("font_focus_color", CREAM)
+	dropdown.add_theme_color_override("font_color", Palette.TEXT_BONE)
+	dropdown.add_theme_color_override("font_hover_color", Palette.TEXT_BONE)
+	dropdown.add_theme_color_override("font_hover_pressed_color", Palette.TEXT_BONE)
+	dropdown.add_theme_color_override("font_pressed_color", Palette.TEXT_BONE)
+	dropdown.add_theme_color_override("font_focus_color", Palette.TEXT_BONE)
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.15, 0.16, 0.19)
-	normal.border_color = Color("383a42")
+	normal.bg_color = Palette.PANEL_BG
+	normal.border_color = Palette.ACCENT_EDGE
 	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(6)
+	normal.set_corner_radius_all(0)
 	normal.content_margin_left = 12
 	normal.content_margin_right = 12
 	var hover := normal.duplicate()
-	hover.bg_color = CREAM
-	hover.border_color = Color("2b2620")
+	hover.bg_color = Palette.ACCENT_EDGE
+	hover.border_color = Palette.TEXT_BONE
 	dropdown.add_theme_stylebox_override("normal", normal)
 	dropdown.add_theme_stylebox_override("hover", hover)
 	dropdown.add_theme_stylebox_override("pressed", hover)
@@ -199,13 +205,13 @@ func _build_details(panel: PanelContainer) -> void:
 	details.add_theme_constant_override("separation", 16)
 	scroll.add_child(details)
 
-	details.add_child(_make_label("PROFILE", 30, CREAM, DISPLAY_FONT))
+	details.add_child(_make_label("PROFILE", 30, Palette.TEXT_BONE))
 	_build_strategy_tags(details)
 	details.add_child(HSeparator.new())
-	details.add_child(_make_label("ACTIONS", 27, CREAM, DISPLAY_FONT))
+	details.add_child(_make_label("ACTIONS", 27, Palette.TEXT_BONE))
 	_build_action_bars(details)
 	details.add_child(HSeparator.new())
-	details.add_child(_make_label("UPGRADES", 27, CREAM, DISPLAY_FONT))
+	details.add_child(_make_label("UPGRADES", 27, Palette.TEXT_BONE))
 	_build_upgrade_matrix(details)
 
 func _build_strategy_tags(parent: VBoxContainer) -> void:
@@ -220,20 +226,20 @@ func _build_strategy_tags(parent: VBoxContainer) -> void:
 		var tag_text: String = "MIXED " + definition.title
 		if candidate.strength >= 0.15:
 			tag_text = definition.left if candidate.value < 0.0 else definition.right
-		var tag := _make_label(tag_text.to_upper(), 22, Color("2b2620"), UI_FONT)
+		var tag := _make_label(tag_text.to_upper(), 22, Color("2b2620"))
 		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		tag.add_theme_stylebox_override("normal", _make_tag_style())
 		tag.custom_minimum_size.y = 42
 		parent.add_child(tag)
 
 func _build_action_bars(parent: VBoxContainer) -> void:
-	parent.add_child(_make_label("TREAT   CLEAR   WAIT", 17, MUTED, UI_FONT))
+	parent.add_child(_make_label("TREAT   CLEAR   WAIT", 17, Palette.TEXT_BONE_MUTED))
 	for i in range(results.size()):
 		var actions: Array = results[i].get("action_history", [])
 		var treat := actions.count("TREAT")
 		var clear := actions.count("CLEAR")
 		var wait := actions.count("WAIT")
-		parent.add_child(_make_label("P%d    T %d    C %d    W %d" % [i + 1, treat, clear, wait], 18, CREAM, UI_FONT))
+		parent.add_child(_make_label("P%d    T %d    C %d    W %d" % [i + 1, treat, clear, wait], 18, Palette.TEXT_BONE))
 		var bar := HBoxContainer.new()
 		bar.custom_minimum_size.y = 16
 		bar.add_theme_constant_override("separation", 2)
@@ -256,7 +262,7 @@ func _build_infection_peaks(parent: VBoxContainer) -> void:
 		var high_cells: Array = results[i].get("high_infected_cells_timeline", [])
 		var peak := _max_int(high_cells)
 		var spread: int = results[i].get("newly_infected_cells", 0)
-		parent.add_child(_make_label("P%d   %d high-infection cells   %d new cells" % [i + 1, peak, spread], 18, CREAM, UI_FONT))
+		parent.add_child(_make_label("P%d   %d high-infection cells   %d new cells" % [i + 1, peak, spread], 18, Palette.TEXT_BONE))
 		var bar := ProgressBar.new()
 		bar.max_value = 24
 		bar.value = peak
@@ -271,14 +277,14 @@ func _build_upgrade_matrix(parent: VBoxContainer) -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 5)
 	parent.add_child(grid)
-	grid.add_child(_make_label("UPGRADE", 17, MUTED, UI_FONT, 240))
+	grid.add_child(_make_label("UPGRADE", 17, Palette.TEXT_BONE_MUTED, 240))
 	for i in range(results.size()):
-		grid.add_child(_make_label("P%d" % [i + 1], 17, MUTED, UI_FONT, 62))
+		grid.add_child(_make_label("P%d" % [i + 1], 17, Palette.TEXT_BONE_MUTED, 62))
 	for key in UPGRADE_NAMES:
-		grid.add_child(_make_label(UPGRADE_NAMES[key], 17, CREAM, UI_FONT, 240))
+		grid.add_child(_make_label(UPGRADE_NAMES[key], 17, Palette.TEXT_BONE, 240))
 		for result in results:
 			var purchase_day := _upgrade_day(result, key)
-			grid.add_child(_make_label("D%d" % purchase_day if purchase_day > 0 else "-", 17, CREAM, UI_FONT, 62))
+			grid.add_child(_make_label("D%d" % purchase_day if purchase_day > 0 else "-", 17, Palette.TEXT_BONE, 62))
 
 func _score_result(result: Dictionary, key: String) -> float:
 	var actions: Array = result.get("action_history", [])
@@ -369,68 +375,46 @@ func _max_int(values: Array) -> int:
 
 func _make_panel() -> PanelContainer:
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = PANEL
-	style.border_color = Color("383a42")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(10)
-	style.content_margin_left = 20
-	style.content_margin_right = 20
-	style.content_margin_top = 14
-	style.content_margin_bottom = 14
-	panel.add_theme_stylebox_override("panel", style)
+	panel.add_theme_stylebox_override("panel", HudStyle.make_panel_style())
+	var grain := ColorRect.new()
+	grain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var material := ShaderMaterial.new()
+	material.shader = load("res://shaders/panel_grain.gdshader")
+	grain.material = material
+	panel.add_child(grain)
 	return panel
 
 func _style_progress_bar(bar: ProgressBar) -> void:
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.15, 0.16, 0.19)
-	bg.border_color = Color("383a42")
+	bg.bg_color = Palette.PANEL_BG
+	bg.border_color = Palette.ACCENT_EDGE
 	bg.set_border_width_all(1)
-	bg.set_corner_radius_all(4)
+	bg.set_corner_radius_all(0)
 	bar.add_theme_stylebox_override("background", bg)
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = CREAM
-	fill.set_corner_radius_all(4)
+	fill.bg_color = Palette.TEXT_BONE
+	fill.set_corner_radius_all(0)
 	bar.add_theme_stylebox_override("fill", fill)
 
 func _make_tag_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = CREAM
-	style.set_corner_radius_all(6)
+	style.bg_color = Palette.TEXT_BONE
+	style.set_corner_radius_all(0)
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 7
 	style.content_margin_bottom = 7
 	return style
 
-func _make_label(text: String, font_size: int, color: Color, font: Font, min_width := -1) -> Label:
+func _make_label(text: String, font_size: int, color: Color, min_width := -1) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_override("font", font)
+	label.add_theme_font_override("font", ui_font)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	if min_width > 0:
 		label.custom_minimum_size.x = min_width
 	return label
-
-func _style_accent_button(button: Button, font_size: int) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = CREAM
-	normal.border_color = Color("2b2620")
-	normal.set_border_width_all(3)
-	normal.set_corner_radius_all(10)
-	var hover: StyleBoxFlat = normal.duplicate()
-	hover.bg_color = Color("fff7d9")
-	var pressed: StyleBoxFlat = normal.duplicate()
-	pressed.bg_color = Color("e0d3a0")
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", pressed)
-	button.add_theme_font_override("font", UI_FONT)
-	button.add_theme_font_size_override("font_size", font_size)
-	button.add_theme_color_override("font_color", Color("2b2620"))
-	button.add_theme_color_override("font_hover_color", Color("2b2620"))
-	button.add_theme_color_override("font_pressed_color", Color("2b2620"))
 
 func _on_main_menu_pressed() -> void:
 	GameResults.reset()
