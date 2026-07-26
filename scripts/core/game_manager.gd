@@ -1184,7 +1184,7 @@ func _build_status_panel() -> void:
 	vbox.add_child(vaccine_progress)
 
 	vaccine_days_label = Label.new()
-	vaccine_days_label.add_theme_font_override("font", _make_ui_font())  # caption text -- condensed font, not the display one
+	vaccine_days_label.add_theme_font_override("font", _make_ui_font())
 	vaccine_days_label.add_theme_font_size_override("font_size", 16)
 	vaccine_days_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
 	vbox.add_child(vaccine_days_label)

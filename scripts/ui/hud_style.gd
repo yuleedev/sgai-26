@@ -19,12 +19,7 @@ static func make_panel_style(accent_edge: AccentEdge = AccentEdge.BORDERED) -> S
 	return style
 
 static func make_ui_font() -> Font:
-	# the one shared body/label font, used everywhere except the few "display"
-	# moments (day count, vaccine countdown) that intentionally use Bangers instead
-	var variation := FontVariation.new()
-	variation.base_font = load("res://assets/Coolvetica Rg.otf")
-	variation.spacing_glyph = 3  # condensed fonts read cramped at zero tracking
-	return variation
+	return load("res://assets/Play-Regular.ttf")
 
 static func style_button(btn: Button, fill_color: Color) -> void:
 	var normal := StyleBoxFlat.new()

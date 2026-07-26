@@ -29,4 +29,3 @@ func reset() -> void:
 	playthrough_results.clear()
 
 	run_id = 1
-
