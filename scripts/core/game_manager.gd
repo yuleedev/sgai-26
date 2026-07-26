@@ -921,8 +921,8 @@ func _on_clear_plus_pressed() -> void:
 	if money < reinforced_clear_fee:
 		set_last_action("Not enough funding for Reinforced Clear")
 		return
-    
-  is_transitioning = true
+	
+	is_transitioning = true
 	var doses_before := doses
 	var funding_before := money
 	var population_before := living_population()
@@ -1098,7 +1098,7 @@ func _build_status_panel() -> void:
 	vbox.custom_minimum_size = Vector2(340, 0)
 	panel.add_child(vbox)
 
-  playthrough_value = _add_stat_row(vbox, "PLAYTHROUGH", Color(0.76, 0.68, 1.0))
+	playthrough_value = _add_stat_row(vbox, "PLAYTHROUGH", Color(0.76, 0.68, 1.0))
 	# Section 1: Status
 	day_value = _add_stat_row(vbox, "DAY", Palette.TEXT_BONE)
 	day_value.add_theme_font_override("font", _make_display_font())

@@ -6,7 +6,7 @@ const STRATEGY_SCALE = preload("res://scripts/ui/strategy_scale.gd")
 const CREAM := Color("f7edc5")
 const MUTED := Color("aaa9ad")
 const PANEL := Color(0.09, 0.095, 0.11, 0.94)
-const TITLE_MUSIC := preload("res://assets/audio/hauntsync-stealth-breacher-tense-title-screen-218087.mp3")
+const TITLE_MUSIC := preload("res://assets/audio/startbgmusic.mp3")
 
 const SCALE_DEFINITIONS := [
 	{"key": "cure_clear", "title": "INTERVENTION", "left": "CURE", "right": "CLEAR"},

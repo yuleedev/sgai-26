@@ -279,7 +279,7 @@ func play_intro() -> void:
 	setup_label(zombies_killed, "Zombies killed: %d" % GameResults.zombies_killed, KILLED_Y)
 	setup_label(zombies_cured, "Zombies cured: %d" % GameResults.zombies_cured, CURED_Y)
 	show_results()
-if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
+	if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
 		animate_try_again_intro()
 		await animate_analysis_intro()
 		try_again_button.disabled = false
@@ -565,11 +565,6 @@ func play_try_again_animation() -> void:
 func transition_fade() -> void:
 	is_transitioning = true
 	transition_to_scene("res://scenes/map_scene.tscn", true)
-
-func transition_to_scene(scene_path: String, begin_next_playthrough := false) -> void:
-	var fade_tween := create_tween()
-	fade_tween.tween_property(fade_overlay, "modulate:a", 1.0, 0.3)
-	await fade_tween.finished
 
 func transition_to_scene(scene_path: String, begin_next_playthrough := false) -> void:
 	var fade_tween := create_tween()
