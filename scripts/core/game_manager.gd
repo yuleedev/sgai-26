@@ -903,6 +903,7 @@ func _on_clear_pressed() -> void:
 	var population_before := living_population()
 	var data := cell_data[selected_cell]
 	var killed: int = compute_action_amount(data["infected"], clear_kill_rate)
+	_record_targeted_action("CLEAR", selected_cell, int(data["infected"]))
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
