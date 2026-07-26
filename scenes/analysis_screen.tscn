@@ -1,9 +1,11 @@
-[gd_scene load_steps=3 format=3]
+
+[gd_scene load_steps = 3 format=3 uid="uid://cepu8d74t12lb"]
 
 [ext_resource type="Script" path="res://scripts/ui/analysis_screen.gd" id="1_analysis"]
-[ext_resource type="Texture2D" path="res://assets/start screen/background.png" id="2_background"]
+[ext_resource type="Texture2D" uid="uid://bjbrdeagw3nfi" path="res://assets/start screen/background.png" id="2_background"]
 
-[node name="AnalysisScreen" type="Control"]
+[node name="AnalysisScreen" type="Control" unique_id=765984175]
+
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,7 +14,10 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_analysis")
 
-[node name="Background" type="TextureRect" parent="."]
+
+[node name="Background" type="TextureRect" parent="." unique_id=740828815]
+modulate = Color(0.42, 0.42, 0.42, 1)
+
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -22,9 +27,12 @@ grow_vertical = 2
 texture = ExtResource("2_background")
 expand_mode = 1
 stretch_mode = 6
+
 modulate = Color(0.42, 0.42, 0.42, 1)
 
-[node name="Scrim" type="ColorRect" parent="."]
+
+[node name="Scrim" type="ColorRect" parent="." unique_id=1859988163]
+
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -34,7 +42,9 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.025, 0.028, 0.035, 0.84)
 
-[node name="MainMenuButton" type="Button" parent="."]
+
+[node name="MainMenuButton" type="Button" parent="." unique_id=200232944]
+
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -49,7 +59,9 @@ grow_horizontal = 0
 grow_vertical = 0
 text = "RESTART"
 
-[node name="CloseGameButton" type="Button" parent="."]
+
+[node name="CloseGameButton" type="Button" parent="." unique_id=959740239]
+
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0

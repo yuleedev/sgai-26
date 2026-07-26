@@ -2,8 +2,11 @@
 
 [ext_resource type="Script" uid="uid://bocjfnp03aftb" path="res://scripts/core/game_manager.gd" id="1_0wcw4"]
 [ext_resource type="Texture2D" uid="uid://b32pgnf8lb6yk" path="res://assets/tiles.png" id="2_ne7uw"]
-[ext_resource type="AudioStream" uid="uid://cumj6w0ngtfgx" path="res://assets/audio/5. Siren Glitch.wav" id="3_5m4q6"]
-[ext_resource type="AudioStream" uid="uid://r4hi7ikspsqr" path="res://assets/audio/tithuh-powerup-success-523645.mp3" id="4_clear_sfx"]
+[ext_resource type="AudioStream" uid="uid://cumj6w0ngtfgx" path="res://assets/audio/mainbgmusic.wav" id="3_5m4q6"]
+[ext_resource type="AudioStream" uid="uid://r4hi7ikspsqr" path="res://assets/audio/treat.mp3" id="4_clear_sfx"]
+[ext_resource type="AudioStream" uid="uid://gthxyy2l7jme" path="res://assets/audio/clearaction.mp3" id="5_clear_sfx"]
+[ext_resource type="Shader" path="res://shaders/background.gdshader" id="6_bg_shader"]
+[ext_resource type="AudioStream" path="res://assets/audio/glasswood_tactics.mp3" id="7_glasswood"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5m4q6"]
 texture = ExtResource("2_ne7uw")
@@ -18,8 +21,32 @@ texture_region_size = Vector2i(200, 200)
 tile_size = Vector2i(200, 200)
 sources/0 = SubResource("TileSetAtlasSource_5m4q6")
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bg"]
+shader = ExtResource("6_bg_shader")
+shader_parameter/base_color = Color(0.0784314, 0.0901961, 0.101961, 1)
+shader_parameter/blob_color_a = Color(0.105882, 0.129412, 0.121569, 1)
+shader_parameter/blob_color_b = Color(0.133333, 0.164706, 0.14902, 1)
+shader_parameter/blob_color_c = Color(0.168627, 0.196078, 0.188235, 1)
+shader_parameter/blob_scale = 9.0
+shader_parameter/fine_noise_strength = 0.08
+shader_parameter/grain_amount = 0.15
+shader_parameter/vignette_strength = 0.6
+shader_parameter/show_grid = true
+shader_parameter/grid_spacing = 100.0
+shader_parameter/grid_opacity = 0.06
+
 [node name="MapScene" type="Node2D" unique_id=952920984]
 script = ExtResource("1_0wcw4")
+
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="Background" type="ColorRect" parent="BackgroundLayer"]
+material = SubResource("ShaderMaterial_bg")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
 [node name="Grid" type="TileMapLayer" parent="." unique_id=1978752745]
 tile_set = SubResource("TileSet_vlip3")
@@ -27,9 +54,13 @@ tile_set = SubResource("TileSet_vlip3")
 [node name="UI" type="CanvasLayer" parent="." unique_id=1969089315]
 
 [node name="MapMusic" type="AudioStreamPlayer" parent="." unique_id=673821072]
-stream = ExtResource("3_5m4q6")
+stream = ExtResource("7_glasswood")
 volume_db = -20.0
 
 [node name="TreatSound" type="AudioStreamPlayer" parent="." unique_id=487980846]
 stream = ExtResource("4_clear_sfx")
+volume_db = -12.0
+
+[node name="ClearSound" type="AudioStreamPlayer" parent="." unique_id=487980847]
+stream = ExtResource("5_clear_sfx")
 volume_db = -12.0

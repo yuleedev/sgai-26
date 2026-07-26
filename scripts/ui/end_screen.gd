@@ -34,6 +34,9 @@ extends Control
 
 # sound effects
 @onready var start_game_sound: AudioStreamPlayer = $StartGameSound
+@onready var arms_in_sound: AudioStreamPlayer = $ArmsInSound
+
+const TITLE_MUSIC := preload("res://assets/audio/startbgmusic.mp3")
 
 # button textures
 @export var try_again_normal_texture: Texture2D
@@ -43,6 +46,14 @@ extends Control
 @export var analysis_normal_texture: Texture2D
 @export var analysis_hover_texture: Texture2D
 @export var analysis_pressed_texture: Texture2D
+
+# vaccine ui
+@onready var vaccine_ui: TextureRect = $VaccineUI
+@onready var vaccine_art: TextureRect = $VaccineArt
+@onready var vaccine_button: Button = $VaccineButton
+@export var vaccine_normal_texture: Texture2D
+@export var vaccine_hover_texture: Texture2D
+@export var vaccine_pressed_texture: Texture2D
 
 # store starting info
 var bg_start_pos: Vector2
@@ -69,6 +80,7 @@ var hand10_pos: Vector2
 var is_pressing_try_again := false
 var is_pressing_analysis := false
 var is_transitioning := false
+var is_pressing_vaccine := false
 
 # showing scores
 const FONT: FontFile = preload("res://assets/Bangers-Regular.ttf")
@@ -83,6 +95,7 @@ const CURED_Y = 610
 @onready var zombies_cured: Label = $ZombiesCured
 
 func _ready() -> void:
+
 	var is_final_playthrough := GameResults.playthrough_number >= FINAL_PLAYTHROUGH
 	fade_overlay.show()
 	fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -125,6 +138,10 @@ func _ready() -> void:
 		var reveal_scale := Vector2(visual_size.x / 823.0, visual_size.y / 315.0)
 		reveal_mask.position = Vector2(left_x, try_again_y) - Vector2(549, 667) * reveal_scale
 		reveal_mask.scale = reveal_scale
+
+
+	Music.play_track(TITLE_MUSIC, -10.0)
+	start_game_sound.finished.connect(Music.fade_out)
 
 	# center pivots
 	left_hand.pivot_offset = left_hand.size / 2.0
@@ -169,6 +186,37 @@ func _ready() -> void:
 	zombies_killed.modulate.a = 0.0
 	zombies_cured.modulate.a = 0.0
 	
+	vaccine_ui.modulate.a = 0.0
+	vaccine_art.modulate.a = 0.0
+	vaccine_button.modulate.a = 0.0
+	
+	vaccine_button.mouse_entered.connect(_on_vaccine_button_mouse_entered)
+	vaccine_button.mouse_exited.connect(_on_vaccine_button_mouse_exited)
+	vaccine_button.pressed.connect(_on_vaccine_button_pressed)
+	
+	show_vaccine_screen()
+
+func show_vaccine_screen() -> void:
+	var tween = create_tween()
+	tween.set_parallel(true)
+	# fade in
+	tween.tween_property(fade_overlay, "modulate:a", 0.0, 1.0)
+	tween.tween_property(background, "modulate:a", 1.0, 0.5)
+	
+	tween.tween_property(vaccine_ui, "modulate:a", 1.0, 0.5)
+	tween.tween_property(vaccine_art, "modulate:a", 1.0, 0.5)
+	tween.tween_property(vaccine_button, "modulate:a", 1.0, 0.5)
+
+func setup_results() -> void:
+	var tween = create_tween()
+	tween.set_parallel(true)
+	$VaccineUI.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$VaccineArt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$VaccineButton.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tween.tween_property(vaccine_ui, "modulate:a", 0.0, 0.5)
+	tween.tween_property(vaccine_art, "modulate:a", 0.0, 0.5)
+	tween.tween_property(vaccine_button, "modulate:a", 0.0, 0.5)
+	
 	# offset initial position before motion
 	title.position += Vector2(0,-80)
 	try_again_art.scale = Vector2(1.02, 1.02)
@@ -199,9 +247,13 @@ func _ready() -> void:
 	try_again_button.mouse_exited.connect(_on_try_again_button_mouse_exited)
 	try_again_button.button_down.connect(_on_try_again_button_down)
 	ClickSound.exclude(try_again_button)
+
 	cancel_code_button.pressed.connect(_on_cancel_code_pressed)
 	unlock_analysis_button.pressed.connect(_on_unlock_analysis_pressed)
 	code_input.text_submitted.connect(_on_code_submitted)
+
+	ClickSound.exclude_hover(try_again_button)
+
 	
 	# call anim
 	play_intro()
@@ -218,12 +270,7 @@ func play_intro() -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)
 	
-	# fade in
-	tween.tween_property(fade_overlay, "modulate:a", 0.0, 1.0)
-	tween.tween_property(background, "modulate:a", 1.0, 0.6)
-	
 	# wait for these animations to finish
-	await tween.finished
 	await animate_title_intro()
 	await animate_hands_intro()
 	
@@ -232,8 +279,7 @@ func play_intro() -> void:
 	setup_label(zombies_killed, "Zombies killed: %d" % GameResults.zombies_killed, KILLED_Y)
 	setup_label(zombies_cured, "Zombies cured: %d" % GameResults.zombies_cured, CURED_Y)
 	show_results()
-	
-	if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
+if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
 		animate_try_again_intro()
 		await animate_analysis_intro()
 		try_again_button.disabled = false
@@ -241,6 +287,9 @@ func play_intro() -> void:
 	else:
 		await animate_try_again_intro()
 		try_again_button.disabled = false
+
+	if GameResults.run_id >= 3:
+		_add_export_buttons()
 	
 	# loop background motion
 	fog_loop()
@@ -348,9 +397,10 @@ func animate_title_intro() -> void:
 	await tween.finished
 
 func animate_hands_intro() -> void:
+	arms_in_sound.play()
 	var tween := create_tween()
 	tween.set_parallel(true)
-	
+
 	tween.tween_property(left_hand, "modulate:a", 1.0, 0.2)
 	tween.tween_property(right_hand, "modulate:a", 1.0, 0.2)
 	tween.tween_property(fingers, "modulate:a", 1.0, 0.2)
@@ -445,6 +495,22 @@ func fog_loop() -> void:
 		tween_back.tween_property(fog, "modulate:a", 0.5, 4.0)
 		await tween_back.finished
 
+func _on_vaccine_button_mouse_entered() -> void:
+	if is_pressing_vaccine:
+		return
+	vaccine_art.texture = vaccine_hover_texture
+
+func _on_vaccine_button_mouse_exited() -> void:
+	if is_pressing_vaccine:
+		return
+	vaccine_art.texture = vaccine_normal_texture
+
+func _on_vaccine_button_pressed() -> void:
+	if is_pressing_vaccine:
+		return
+	vaccine_art.texture = vaccine_pressed_texture
+	setup_results()
+
 func _on_try_again_button_mouse_entered() -> void:
 	if is_pressing_try_again or is_transitioning:
 		return
@@ -504,15 +570,21 @@ func transition_to_scene(scene_path: String, begin_next_playthrough := false) ->
 	var fade_tween := create_tween()
 	fade_tween.tween_property(fade_overlay, "modulate:a", 1.0, 0.3)
 	await fade_tween.finished
+
+func transition_to_scene(scene_path: String, begin_next_playthrough := false) -> void:
+	var fade_tween := create_tween()
+	fade_tween.tween_property(fade_overlay, "modulate:a", 1.0, 0.3)
+	await fade_tween.finished
 	if begin_next_playthrough:
 		GameResults.begin_next_playthrough()
+	Music.fade_out()
 	get_tree().change_scene_to_file(scene_path)
 
 func setup_label(label: Label, text: String, y: float) -> void:
 	label.text = text
 	label.add_theme_font_override("font", FONT)
 	label.add_theme_font_size_override("font_size", 54)
-	label.add_theme_color_override("font_color", Color("f7edc5"))
+	label.add_theme_color_override("font_color", Palette.TEXT_BONE)  # same value as before, now shared via Palette
 	label.position = Vector2(0,y)
 	label.size = Vector2(1920,1080)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -523,3 +595,106 @@ func show_results() -> void:
 	tween.tween_property(people_lost, "modulate:a", 1.0, 0.6)
 	tween.tween_property(zombies_killed, "modulate:a", 1.0, 0.6)
 	tween.tween_property(zombies_cured, "modulate:a", 1.0, 0.6)
+
+func _add_export_buttons() -> void:
+	# --- BUTTON CONTAINER (vertical, right side of screen) ---
+	# position: x/y offset from top-left of the screen
+	# size: width/height of the container box
+	# separation: gap between buttons in pixels
+	var container := VBoxContainer.new()
+	container.position = Vector2(1580, 400)  # <-- adjust x/y to move buttons (right side)
+	container.size = Vector2(300, 140)       # <-- adjust width/height
+	container.add_theme_constant_override("separation", 16)  # <-- gap between buttons
+	add_child(container)
+
+	# --- OPEN DATA FOLDER BUTTON ---
+	# text: label shown on the button
+	# custom_minimum_size: button width x height
+	# accent color: border/highlight color (background is auto-darkened)
+	var folder_btn := Button.new()
+	folder_btn.text = "Open Data Folder"
+	folder_btn.custom_minimum_size = Vector2(300, 56)  # <-- button width x height
+	_style_export_button(folder_btn, Color(0.32, 0.52, 0.68))  # <-- blue accent
+	folder_btn.pressed.connect(_on_open_data_folder)
+	ClickSound.exclude(folder_btn)
+	container.add_child(folder_btn)
+
+	# --- COPY CSV TO CLIPBOARD BUTTON ---
+	var copy_btn := Button.new()
+	copy_btn.text = "Copy CSV to Clipboard"
+	copy_btn.custom_minimum_size = Vector2(300, 56)  # <-- button width x height
+	_style_export_button(copy_btn, Color(0.44, 0.42, 0.58))  # <-- purple accent
+	copy_btn.pressed.connect(_on_copy_csv_to_clipboard)
+	ClickSound.exclude(copy_btn)
+	container.add_child(copy_btn)
+
+func _style_export_button(btn: Button, accent: Color) -> void:
+	# --- BUTTON STYLE ---
+	# font_size: text size on the button
+	# corner_radius: roundness of button corners
+	# border_width: thickness of the accent border
+	# content_margin_top/bottom: vertical padding inside the button
+	# shadow_size: drop shadow depth
+	var font := preload("res://assets/Play-Regular.ttf")
+	btn.add_theme_font_override("font", font)
+	btn.add_theme_font_size_override("font_size", 22)  # <-- text size
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = accent.darkened(0.45)   # <-- background darkness (0 = full accent, 1 = black)
+	normal.set_corner_radius_all(8)            # <-- corner roundness in pixels
+	normal.border_width_left = 2               # <-- border thickness (all sides)
+	normal.border_width_right = 2
+	normal.border_width_top = 2
+	normal.border_width_bottom = 2
+	normal.border_color = accent               # <-- border color (uses the accent passed in)
+	normal.content_margin_top = 8              # <-- vertical padding inside button
+	normal.content_margin_bottom = 8
+	normal.shadow_color = Color(0, 0, 0, 0.35) # <-- shadow color/opacity
+	normal.shadow_size = 4                     # <-- shadow blur radius
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_color_override("font_color", Palette.TEXT_BONE)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = accent.darkened(0.25)
+	hover.border_color = accent.lightened(0.2)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = accent.darkened(0.6)
+	btn.add_theme_stylebox_override("pressed", pressed)
+
+func _on_open_data_folder() -> void:
+	OS.shell_open(OS.get_user_data_dir())
+
+func _on_copy_csv_to_clipboard() -> void:
+	var all_log_content := ""
+	var all_summary_content := ""
+	for n in range(1, GameResults.run_id + 1):
+		var log_path := "user://log_run%d.csv" % n
+		var summary_path := "user://summary_run%d.csv" % n
+		if FileAccess.file_exists(log_path):
+			var f := FileAccess.open(log_path, FileAccess.READ)
+			if f != null:
+				var lines := f.get_as_text().split("\n", true)
+				f.close()
+				# skip header row on subsequent runs so columns aren't repeated
+				var start := 1 if n > 1 else 0
+				for i in range(start, lines.size()):
+					if lines[i].length() > 0:
+						all_log_content += lines[i] + "\n"
+		if FileAccess.file_exists(summary_path):
+			var f := FileAccess.open(summary_path, FileAccess.READ)
+			if f != null:
+				var lines := f.get_as_text().split("\n", true)
+				f.close()
+				var start := 1 if n > 1 else 0
+				for i in range(start, lines.size()):
+					if lines[i].length() > 0:
+						all_summary_content += lines[i] + "\n"
+	var content := ""
+	if all_log_content.length() > 0:
+		content += all_log_content
+	if all_summary_content.length() > 0:
+		if content.length() > 0:
+			content += "\n\n--- SUMMARY ---\n\n"
+		content += all_summary_content
+	if content.length() > 0:
+		DisplayServer.clipboard_set(content)

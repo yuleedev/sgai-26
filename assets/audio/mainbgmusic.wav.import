@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://cumj6w0ngtfgx"
-path="res://.godot/imported/5. Siren Glitch.wav-6825af38067edf96b0a1b434ab4f942d.sample"
+path="res://.godot/imported/mainbgmusic.wav-d37bef314893e51f9c7808a06e05a5a6.sample"
 
 [deps]
 
-source_file="res://assets/audio/5. Siren Glitch.wav"
-dest_files=["res://.godot/imported/5. Siren Glitch.wav-6825af38067edf96b0a1b434ab4f942d.sample"]
+source_file="res://assets/audio/mainbgmusic.wav"
+dest_files=["res://.godot/imported/mainbgmusic.wav-d37bef314893e51f9c7808a06e05a5a6.sample"]
 
 [params]
 

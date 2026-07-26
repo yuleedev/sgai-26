@@ -96,6 +96,9 @@ const NODE_RADIUS := NODE_SIZE / 2
 var upgrade_buttons: Dictionary = {}
 var selected_key: String = ""
 
+const PURCHASE_SOUND: AudioStream = preload("res://assets/audio/purchase.mp3")
+@onready var purchase_sound_player: AudioStreamPlayer = AudioStreamPlayer.new()
+
 func _ready() -> void:
 	_ui_font = _make_ui_font()
 	_apply_theme()
@@ -105,47 +108,43 @@ func _ready() -> void:
 	detail_buy_button.pressed.connect(_on_detail_buy_pressed)
 	hide_details()
 
+	purchase_sound_player.stream = PURCHASE_SOUND
+	purchase_sound_player.volume_db = -18.0
+	add_child(purchase_sound_player)
+
 func _make_ui_font() -> Font:
-	return load("res://assets/Play-Regular.ttf")
+	return HudStyle.make_ui_font()
 
 func _apply_theme() -> void:
 	bg_overlay.color = Color(0.03, 0.035, 0.045, 0.82)
 
-	var panel_bg := StyleBoxFlat.new()
-	panel_bg.bg_color = Color(0.13, 0.14, 0.16)
-	panel_bg.set_corner_radius_all(8)
-	panel_bg.corner_detail = 8
-	panel_bg.border_width_left = 1
-	panel_bg.border_width_right = 1
-	panel_bg.border_width_top = 1
-	panel_bg.border_width_bottom = 1
-	panel_bg.border_color = Color(0.24, 0.26, 0.30)
+	var panel_bg := HudStyle.make_panel_style(HudStyle.AccentEdge.BORDERED)
 	panel_bg.content_margin_left = 32
 	panel_bg.content_margin_right = 32
 	panel_bg.content_margin_top = 26
 	panel_bg.content_margin_bottom = 26
 	panel.add_theme_stylebox_override("panel", panel_bg)
 
-	panel.add_theme_color_override("font_color", Color(0.88, 0.88, 0.88))
+	panel.add_theme_color_override("font_color", Palette.TEXT_BONE)
 
 	var title := $Panel/MainVBox/Header/Title as Label
 	if title != null and _ui_font != null:
 		title.add_theme_font_override("font", _ui_font)
 		title.add_theme_font_size_override("font_size", 32)
-		title.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+		title.add_theme_color_override("font_color", Palette.TEXT_BONE)
 
 	money_label.add_theme_font_override("font", _ui_font)
 	money_label.add_theme_font_size_override("font_size", 32)
 	money_label.add_theme_color_override("font_color", Color(0.95, 0.75, 0.2))
 
-	detail_hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+	detail_hint.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 	detail_hint.add_theme_font_size_override("font_size", 16)
 
 	detail_name.add_theme_font_override("font", _ui_font)
 	detail_name.add_theme_font_size_override("font_size", 22)
-	detail_name.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	detail_name.add_theme_color_override("font_color", Palette.TEXT_BONE)
 
-	detail_desc.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	detail_desc.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 	detail_desc.add_theme_font_size_override("font_size", 14)
 
 	detail_cost.add_theme_font_override("font", _ui_font)
@@ -154,7 +153,7 @@ func _apply_theme() -> void:
 
 	detail_purchased.add_theme_font_override("font", _ui_font)
 	detail_purchased.add_theme_font_size_override("font_size", 20)
-	detail_purchased.add_theme_color_override("font_color", Color(0.3, 0.9, 0.3))
+	detail_purchased.add_theme_color_override("font_color", Palette.VACCINE_FILL)  # same "owned/complete" green as the vaccine bar fill
 
 	detail_buy_button.add_theme_font_override("font", _ui_font)
 	detail_buy_button.add_theme_font_size_override("font_size", 18)
@@ -162,8 +161,8 @@ func _apply_theme() -> void:
 	close_button.add_theme_font_override("font", _ui_font)
 	close_button.add_theme_font_size_override("font_size", 18)
 
-	_style_dark_button(detail_buy_button)
-	_style_dark_button(close_button)
+	HudStyle.style_button(detail_buy_button, Palette.TREAT_BUTTON_FILL)
+	HudStyle.style_button(close_button, Palette.NEUTRAL_BUTTON_FILL)
 
 	detail_content.add_theme_constant_override("separation", 12)
 	detail_panel.add_theme_constant_override("separation", 12)
@@ -173,81 +172,13 @@ func _apply_theme() -> void:
 	detail_buy_button.custom_minimum_size = Vector2(0, 44)
 	close_button.custom_minimum_size = Vector2(120, 44)
 
-	var detail_card := StyleBoxFlat.new()
-	detail_card.bg_color = Color(0.05, 0.05, 0.06, 0.6)
-	detail_card.set_corner_radius_all(8)
-	detail_card.corner_detail = 8
-	detail_card.border_width_left = 1
-	detail_card.border_width_right = 1
-	detail_card.border_width_top = 1
-	detail_card.border_width_bottom = 1
-	detail_card.border_color = Color(0.2, 0.2, 0.22)
+	var detail_card := HudStyle.make_panel_style(HudStyle.AccentEdge.BORDERED)
+	detail_card.bg_color = Palette.BOARD_FRAME_BG  # a shade darker than the main panel, so it still reads as "nested inside" it
 	detail_card.content_margin_left = 20
 	detail_card.content_margin_right = 20
 	detail_card.content_margin_top = 20
 	detail_card.content_margin_bottom = 20
 	detail_box.add_theme_stylebox_override("panel", detail_card)
-
-
-func _style_dark_button(btn: Button) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.15, 0.15, 0.17)
-	normal.set_corner_radius_all(4)
-	normal.corner_detail = 6
-	normal.border_width_left = 1
-	normal.border_width_right = 1
-	normal.border_width_top = 1
-	normal.border_width_bottom = 1
-	normal.border_color = Color(0.26, 0.28, 0.32)
-	normal.content_margin_left = 12
-	normal.content_margin_right = 12
-	normal.content_margin_top = 4
-	normal.content_margin_bottom = 4
-	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
-
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(0.20, 0.22, 0.26)
-	hover.set_corner_radius_all(4)
-	hover.corner_detail = 6
-	hover.border_width_left = 1
-	hover.border_width_right = 1
-	hover.border_width_top = 1
-	hover.border_width_bottom = 1
-	hover.border_color = Color(0.34, 0.37, 0.42)
-	hover.content_margin_left = 12
-	hover.content_margin_right = 12
-	hover.content_margin_top = 4
-	hover.content_margin_bottom = 4
-	btn.add_theme_stylebox_override("hover", hover)
-	btn.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0))
-
-	var pressed := StyleBoxFlat.new()
-	pressed.bg_color = Color(0.09, 0.10, 0.12)
-	pressed.set_corner_radius_all(4)
-	pressed.corner_detail = 6
-	pressed.border_width_left = 1
-	pressed.border_width_right = 1
-	pressed.border_width_top = 1
-	pressed.border_width_bottom = 1
-	pressed.border_color = Color(0.2, 0.22, 0.26)
-	pressed.content_margin_left = 12
-	pressed.content_margin_right = 12
-	pressed.content_margin_top = 4
-	pressed.content_margin_bottom = 4
-	btn.add_theme_stylebox_override("pressed", pressed)
-
-	var disabled := StyleBoxFlat.new()
-	disabled.bg_color = Color(0.08, 0.08, 0.08)
-	disabled.set_corner_radius_all(4)
-	disabled.corner_detail = 6
-	disabled.border_width_left = 1
-	disabled.border_width_right = 1
-	disabled.border_width_top = 1
-	disabled.border_width_bottom = 1
-	disabled.border_color = Color(0.12, 0.12, 0.12)
-	btn.add_theme_stylebox_override("disabled", disabled)
-	btn.add_theme_color_override("font_disabled_color", Color(0.3, 0.3, 0.3))
 
 func hide_details() -> void:
 	detail_hint.visible = true
@@ -394,7 +325,7 @@ func build_visual_tree() -> void:
 		if _ui_font != null:
 			name_label.add_theme_font_override("font", _ui_font)
 		name_label.add_theme_font_size_override("font_size", 17)
-		name_label.add_theme_color_override("font_color", Color(0.78, 0.78, 0.82))
+		name_label.add_theme_color_override("font_color", Palette.TEXT_BONE_MUTED)
 		visual_tree.add_child(name_label)
 
 	update_node_colors()
@@ -483,6 +414,7 @@ func _on_detail_buy_pressed() -> void:
 	var gm = get_parent()
 	var skill = _get_skill(selected_key)
 	if skill != null and gm.buy_skill(selected_key, skill.cost):
+		purchase_sound_player.play()
 		update_ui()
 		if gm.has_method("refresh_status"):
 			gm.refresh_status()

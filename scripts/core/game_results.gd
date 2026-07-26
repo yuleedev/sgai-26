@@ -3,6 +3,7 @@ extends Node
 var people_lost: int = 0
 var zombies_killed: int = 0
 var zombies_cured: int = 0
+
 var playthrough_number: int = 1
 var playthrough_results: Array[Dictionary] = []
 
@@ -16,9 +17,16 @@ func record_playthrough(result: Dictionary) -> void:
 	else:
 		playthrough_results.append(result)
 
+var run_id: int = 1
+
+
 func reset() -> void:
 	people_lost = 0
 	zombies_killed = 0
 	zombies_cured = 0
+
 	playthrough_number = 1
 	playthrough_results.clear()
+
+	run_id = 1
+

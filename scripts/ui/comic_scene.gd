@@ -79,7 +79,7 @@ func style_start_button() -> void:
 	start_button.add_theme_stylebox_override("normal", normal)
 	start_button.add_theme_stylebox_override("hover", hover)
 	start_button.add_theme_stylebox_override("pressed", pressed)
-	start_button.add_theme_font_override("font", load("res://assets/Play-Regular.ttf"))
+	start_button.add_theme_font_override("font", load("res://assets/Bangers-Regular.ttf"))
 	start_button.add_theme_font_size_override("font_size", 44)
 	start_button.add_theme_color_override("font_color", Color("2b2620"))
 	start_button.add_theme_color_override("font_hover_color", Color("2b2620"))
@@ -87,6 +87,7 @@ func style_start_button() -> void:
 
 func start_game() -> void:
 	# ends comic, sets scene to map scene (real game)
+	Music.fade_out()
 	get_tree().change_scene_to_file("res://scenes/map_scene.tscn")
 
 func _on_start_game_pressed() -> void:
