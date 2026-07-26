@@ -48,6 +48,12 @@ const CLEAR_PLUS_ACCENT := Color(0.72, 0.46, 0.30)
 const WAIT_ACCENT := Color(0.40, 0.42, 0.48)
 const KILL_TEXT_COLOR := Color(1.0, 0.36, 0.36)
 
+# button fill colors specifically -- desaturated versions distinct from the
+# brighter scan-tint/floating-text colors above, per the panel restyle pass
+const TREAT_BUTTON_FILL := Color("5C7A3A")
+const CLEAR_BUTTON_FILL := Color("8A4038")
+const WAIT_BUTTON_FILL := Color("3A423C")
+
 const SkillTreeScript := preload("res://scripts/ui/skill_tree.gd")  # lets us read SKILLS without instantiating the tree
 
 signal game_ended_signal(ending: String, people_lost: int, zombies_killed: int, zombies_cured: int, total_population: int)
@@ -360,8 +366,8 @@ func update_risk_highlights() -> void:
 	for cell in _compute_at_risk_cells():
 		var corner := grid.position + Vector2(cell.x * TILE_PX, cell.y * TILE_PX)
 		var outline := Line2D.new()
-		outline.width = 5.0
-		outline.default_color = Color(1.0, 0.55, 0.15)
+		outline.width = 3.0
+		outline.default_color = Palette.HIGHLIGHT_BONE
 		outline.z_index = 6
 		outline.closed = true  # lets the engine miter-join the corner properly, instead of
 		outline.points = PackedVector2Array([  # manually repeating the first point, which leaves a seam
@@ -969,8 +975,8 @@ func create_day_controls() -> void:
 	_build_status_panel()
 	_build_right_hud()
 	selection_highlight = Line2D.new()
-	selection_highlight.width = 4.0
-	selection_highlight.default_color = Color(1.0, 0.85, 0.2, 0.85)
+	selection_highlight.width = 3.0
+	selection_highlight.default_color = Palette.HIGHLIGHT_BONE
 	selection_highlight.visible = false
 	selection_highlight.z_index = 5
 	selection_highlight.closed = true
@@ -1078,14 +1084,16 @@ func _build_status_panel() -> void:
 	vaccine_progress.max_value = 1.0
 	vaccine_progress.step = 0.001
 	vaccine_progress.show_percentage = false
-	vaccine_progress.custom_minimum_size = Vector2(0, 18)
+	vaccine_progress.custom_minimum_size = Vector2(0, 14)
 	var vaccine_fill_style := StyleBoxFlat.new()
-	vaccine_fill_style.bg_color = Color(0.42, 0.68, 0.35)  # green -- rescue arriving, not pressure
-	vaccine_fill_style.set_corner_radius_all(4)
+	vaccine_fill_style.bg_color = Palette.VACCINE_FILL
+	vaccine_fill_style.set_corner_radius_all(0)
 	vaccine_progress.add_theme_stylebox_override("fill", vaccine_fill_style)
 	var vaccine_bg_style := StyleBoxFlat.new()
-	vaccine_bg_style.bg_color = Color(0.1, 0.11, 0.13)
-	vaccine_bg_style.set_corner_radius_all(4)
+	vaccine_bg_style.bg_color = Palette.VACCINE_TROUGH_BG
+	vaccine_bg_style.set_corner_radius_all(0)
+	vaccine_bg_style.set_border_width_all(1)
+	vaccine_bg_style.border_color = Palette.VACCINE_TROUGH_BORDER
 	vaccine_progress.add_theme_stylebox_override("background", vaccine_bg_style)
 	vbox.add_child(vaccine_progress)
 
@@ -1168,7 +1176,7 @@ func _build_skill_panel_block() -> PanelContainer:
 	if hud_font != null:
 		button.add_theme_font_override("font", hud_font)
 	button.add_theme_font_size_override("font_size", 22)
-	_style_hud_button(button, Color(0.44, 0.42, 0.58))
+	_style_hud_button(button, WAIT_BUTTON_FILL)  # #3A423C, matches the action buttons per the restyle spec
 	button.pressed.connect(_on_skills_pressed)
 	vbox.add_child(button)
 
@@ -1184,12 +1192,32 @@ func _build_skill_panel_block() -> PanelContainer:
 		grouped[entry.icon_path].append(entry.key)
 
 	for icon_path in grouped:
+		# each icon gets its own column: icon on top, one small level-pip per
+		# tier in that track underneath -- a status line, not a menu
+		var icon_column := VBoxContainer.new()
+		icon_column.add_theme_constant_override("separation", 4)
+		icon_column.alignment = BoxContainer.ALIGNMENT_CENTER
+		hbox.add_child(icon_column)
+
 		var tex_rect := TextureRect.new()
 		tex_rect.texture = load(icon_path)
 		tex_rect.custom_minimum_size = Vector2(20, 20)
 		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		hbox.add_child(tex_rect)
-		skill_preview_icons[icon_path] = {"node": tex_rect, "keys": grouped[icon_path]}
+		icon_column.add_child(tex_rect)
+
+		var pip_row := HBoxContainer.new()
+		pip_row.add_theme_constant_override("separation", 3)
+		pip_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		icon_column.add_child(pip_row)
+
+		var pip_keys: Array = grouped[icon_path]
+		var pips: Array[Panel] = []
+		for i in range(pip_keys.size()):
+			var pip := _make_level_pip()
+			pip_row.add_child(pip)
+			pips.append(pip)
+
+		skill_preview_icons[icon_path] = {"node": tex_rect, "keys": pip_keys, "pips": pips}
 
 	_refresh_skill_preview()
 	return panel
@@ -1197,13 +1225,34 @@ func _build_skill_panel_block() -> PanelContainer:
 func _refresh_skill_preview() -> void:
 	for icon_path in skill_preview_icons:
 		var entry: Dictionary = skill_preview_icons[icon_path]
+		var keys: Array = entry["keys"]
 		var unlocked := false
-		for key in entry["keys"]:
+		for key in keys:
 			if has_skill(key):
 				unlocked = true
 				break
 		var node: TextureRect = entry["node"]
-		node.modulate = Color(1, 1, 1, 1) if unlocked else Color(0.45, 0.45, 0.48, 0.55)
+		node.modulate = Palette.ICON_TINT if unlocked else Palette.ICON_TINT_LOCKED
+
+		var pips: Array = entry["pips"]
+		for i in range(pips.size()):
+			_update_level_pip(pips[i], has_skill(keys[i]))
+
+func _make_level_pip() -> Panel:
+	var pip := Panel.new()
+	pip.custom_minimum_size = Vector2(5, 5)
+	return pip
+
+func _update_level_pip(pip: Panel, owned: bool) -> void:
+	var style := StyleBoxFlat.new()
+	style.set_corner_radius_all(3)
+	if owned:
+		style.bg_color = Palette.ICON_TINT
+	else:
+		style.bg_color = Color(0, 0, 0, 0)
+		style.set_border_width_all(1)
+		style.border_color = Palette.ICON_TINT_LOCKED
+	pip.add_theme_stylebox_override("panel", style)
 
 func _build_action_panel_block() -> PanelContainer:
 	# sizing/positioning is owned by the parent right-hud VBoxContainer, not here
@@ -1225,11 +1274,11 @@ func _build_action_panel_block() -> PanelContainer:
 	header.add_theme_color_override("font_color", Color(0.6, 0.6, 0.65))
 	vbox.add_child(header)
 
-	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, TREAT_COLOR)
-	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, CLEAR_COLOR)
+	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, TREAT_BUTTON_FILL)
+	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, CLEAR_BUTTON_FILL)
 	clear_plus_button = add_action_button(vbox, "Clear+", _on_clear_plus_pressed, CLEAR_PLUS_ACCENT)
 	clear_plus_button.visible = has_skill("reinforced_clear")
-	add_action_button(vbox, "Wait", _on_wait_pressed, WAIT_ACCENT)
+	add_action_button(vbox, "Wait", _on_wait_pressed, WAIT_BUTTON_FILL)
 	return panel
 
 func add_action_button(parent: Node, label: String, handler: Callable, accent: Color) -> Button:
