@@ -279,7 +279,7 @@ func play_intro() -> void:
 	setup_label(zombies_killed, "Zombies killed: %d" % GameResults.zombies_killed, KILLED_Y)
 	setup_label(zombies_cured, "Zombies cured: %d" % GameResults.zombies_cured, CURED_Y)
 	show_results()
-if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
+	if GameResults.playthrough_number >= FINAL_PLAYTHROUGH:
 		animate_try_again_intro()
 		await animate_analysis_intro()
 		try_again_button.disabled = false
