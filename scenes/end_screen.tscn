@@ -48,6 +48,7 @@ script = ExtResource("1_t3chd")
 try_again_normal_texture = ExtResource("8_22ape")
 try_again_hover_texture = ExtResource("3_22ape")
 try_again_pressed_texture = ExtResource("9_hxk3r")
+vaccine_normal_texture = ExtResource("5_016ls")
 vaccine_hover_texture = ExtResource("6_33qqg")
 vaccine_pressed_texture = ExtResource("7_hxk3r")
 
