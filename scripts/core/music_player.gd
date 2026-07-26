@@ -2,6 +2,9 @@ extends AudioStreamPlayer
 
 var _fade_tween: Tween
 
+func _ready() -> void:
+	bus = AudioSettings.MUSIC_BUS
+
 func play_track(track: AudioStream, track_volume_db: float = 0.0) -> void:
 	if stream == track and playing:
 		return
