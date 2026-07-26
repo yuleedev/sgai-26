@@ -7,8 +7,10 @@ const TEXT_BONE := Color("f7edc5")  # matches the result screen's existing text 
 const TEXT_BONE_MUTED := Color(0.533, 0.511, 0.425)  # TEXT_BONE darkened ~45%, precomputed
                                                        # so this const doesn't rely on a method call
 
-const PANEL_BG := Color(0.08, 0.095, 0.075, 0.95)   # dark green-black, not neutral grey
-const PANEL_BORDER := Color(0.22, 0.24, 0.19)        # muted olive-grey, low contrast on purpose
+const PANEL_BG := Color("1E2421")  # fully opaque -- alpha 1.0 by default on a 6-digit hex
+const ACCENT_EDGE := Color("8A7B4A")  # the single accent-edge border color, replaces the old uniform border
+const BOARD_FRAME_BG := Color("161A18")
+const SEPARATOR_COLOR := Color("3A423C")
 
 const BUTTON_TEXT := TEXT_BONE
 const BUTTON_DISABLED_BG := Color(0.11, 0.12, 0.1)

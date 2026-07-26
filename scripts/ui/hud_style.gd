@@ -3,20 +3,19 @@ extends RefCounted
 # Shared HUD look, used by both game_manager.gd and skill_tree.gd so the two
 # screens can't quietly drift into two different-looking dark panel styles.
 
-static func make_panel_style() -> StyleBoxFlat:
+enum AccentEdge { NONE, BORDERED }
+
+static func make_panel_style(accent_edge: AccentEdge = AccentEdge.BORDERED) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Palette.PANEL_BG
-	style.set_corner_radius_all(10)
-	style.corner_detail = 8
-	style.border_width_left = 1
-	style.border_width_right = 1
-	style.border_width_top = 1
-	style.border_width_bottom = 1
-	style.border_color = Palette.PANEL_BORDER
-	style.content_margin_left = 18
-	style.content_margin_right = 18
-	style.content_margin_top = 14
-	style.content_margin_bottom = 14
+	style.set_corner_radius_all(0)
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 16
+	style.content_margin_bottom = 16
+	if accent_edge == AccentEdge.BORDERED:
+		style.set_border_width_all(2)
+		style.border_color = Palette.ACCENT_EDGE
 	style.shadow_color = Color(0, 0, 0, 0.35)
 	style.shadow_size = 8
 	return style

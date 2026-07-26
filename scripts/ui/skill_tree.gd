@@ -121,7 +121,7 @@ func _make_ui_font() -> Font:
 func _apply_theme() -> void:
 	bg_overlay.color = Color(0.03, 0.035, 0.045, 0.82)
 
-	var panel_bg := HudStyle.make_panel_style()
+	var panel_bg := HudStyle.make_panel_style(HudStyle.AccentEdge.BORDERED)
 	panel_bg.content_margin_left = 32
 	panel_bg.content_margin_right = 32
 	panel_bg.content_margin_top = 26

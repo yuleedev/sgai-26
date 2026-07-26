@@ -235,11 +235,14 @@ func create_grid_frame() -> void:
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.13, 0.14, 0.16)
-	sb.set_corner_radius_all(20)
-	sb.corner_detail = 12
-	sb.set_border_width_all(1)
-	sb.border_color = Color(0.22, 0.24, 0.28)
+	sb.bg_color = Palette.BOARD_FRAME_BG
+	sb.set_corner_radius_all(0)
+	sb.set_border_width_all(2)
+	sb.border_color = Palette.ACCENT_EDGE
+	sb.content_margin_left = 16
+	sb.content_margin_right = 16
+	sb.content_margin_top = 16
+	sb.content_margin_bottom = 16
 	sb.shadow_color = Color(0, 0, 0, 0.45)
 	sb.shadow_size = 26
 	frame.add_theme_stylebox_override("panel", sb)
@@ -997,7 +1000,7 @@ func _build_status_panel() -> void:
 	# VBoxContainer and divided by thin HSeparators, not separate bordered panels
 	var panel := PanelContainer.new()
 	panel.position = Vector2(HUD_MARGIN, 24)
-	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
+	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
 	$UI.add_child(panel)
 	status_panel = panel
 
@@ -1014,7 +1017,7 @@ func _build_status_panel() -> void:
 	doses_value = _add_stat_row(vbox, "DOSES", Color(0.55, 0.8, 1.0))
 	population_value = _add_stat_row(vbox, "POPULATION", Color(0.6, 0.88, 0.62))
 
-	vbox.add_child(HSeparator.new())
+	vbox.add_child(_make_hud_separator())
 
 	# Section 2: Selected neighborhood
 	selection_header = Label.new()
@@ -1050,7 +1053,7 @@ func _build_status_panel() -> void:
 	clear_preview_label.add_theme_font_size_override("font_size", 18)
 	selection_stats_box.add_child(clear_preview_label)
 
-	vbox.add_child(HSeparator.new())
+	vbox.add_child(_make_hud_separator())
 
 	# Section 3: Outbreak totals
 	outbreak_totals_value = Label.new()
@@ -1060,7 +1063,7 @@ func _build_status_panel() -> void:
 	outbreak_totals_value.add_theme_color_override("font_color", Color(0.75, 0.75, 0.78))
 	vbox.add_child(outbreak_totals_value)
 
-	vbox.add_child(HSeparator.new())
+	vbox.add_child(_make_hud_separator())
 
 	# Section 4: Vaccine -- the other "important" moment, gets the same display font
 	var vaccine_label := Label.new()
@@ -1114,8 +1117,17 @@ func _add_stat_row(parent: Node, label_text: String, value_color: Color) -> Labe
 	row.add_child(value_label)
 	return value_label
 
-func _make_hud_panel_style() -> StyleBoxFlat:
-	return HudStyle.make_panel_style()
+func _make_hud_separator() -> HSeparator:
+	var sep := HSeparator.new()
+	var line_style := StyleBoxLine.new()
+	line_style.color = Palette.SEPARATOR_COLOR
+	line_style.thickness = 1
+	sep.add_theme_stylebox_override("separator", line_style)
+	sep.add_theme_constant_override("separation", 17)  # 1px line + 8px margin above and below
+	return sep
+
+func _make_hud_panel_style(accent_edge: HudStyle.AccentEdge = HudStyle.AccentEdge.NONE) -> StyleBoxFlat:
+	return HudStyle.make_panel_style(accent_edge)
 
 func _build_right_hud() -> void:
 	# one VBoxContainer owns both blocks now, so width and right-margin are set
@@ -1142,7 +1154,7 @@ func _build_skill_panel_block() -> PanelContainer:
 	# Sizing/positioning is owned by the parent right-hud VBoxContainer, not here.
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_FILL
-	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
+	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
 	skill_button_panel = panel
 
 	var vbox := VBoxContainer.new()
@@ -1197,7 +1209,7 @@ func _build_action_panel_block() -> PanelContainer:
 	# sizing/positioning is owned by the parent right-hud VBoxContainer, not here
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_FILL
-	panel.add_theme_stylebox_override("panel", _make_hud_panel_style())
+	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
 	action_panel = panel
 
 	var vbox := VBoxContainer.new()
