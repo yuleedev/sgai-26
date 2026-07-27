@@ -141,6 +141,8 @@ func _ready() -> void:
 
 
 	Music.play_track(TITLE_MUSIC, -10.0)
+	start_game_sound.bus = AudioSettings.SFX_BUS
+	arms_in_sound.bus = AudioSettings.SFX_BUS
 	start_game_sound.finished.connect(Music.fade_out)
 
 	# center pivots

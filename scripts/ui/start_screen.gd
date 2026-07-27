@@ -64,6 +64,8 @@ var is_transitioning := false
 
 func _ready() -> void:
 	Music.play_track(TITLE_MUSIC, -10.0)
+	start_game_sound.bus = AudioSettings.SFX_BUS
+	arms_in_sound.bus = AudioSettings.SFX_BUS
 	# center pivots
 	left_hand.pivot_offset = left_hand.size / 2.0
 	right_hand.pivot_offset = right_hand.size / 2.0

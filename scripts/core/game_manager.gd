@@ -40,7 +40,11 @@ const COLOR_TILES: Array[Vector2i] =[
 
 const HUD_MARGIN := 24.0  # shared left/right screen margin so the board sits centered between the two side panels
 const RIGHT_HUD_WIDTH := 240.0  # wider of the old skill-panel (200) and action-panel (240) content widths
+
+const SETTINGS_BUTTON_SIZE := 48.0
+const SETTINGS_ICON_INSET := 10.0
 const RIGHT_HUD_BLOCK_GAP := 269.0  # matches the previous gap between the (top-anchored) skill panel
+
 									 # and the (independently center-anchored) action panel at 1920x1080
 const TREAT_COLOR := Color(0.49, 0.84, 0.34)       # green (cure) -- was blue, now matches the "+cured" text color
 const CLEAR_COLOR := Color(0.66, 0.38, 0.38)
@@ -50,6 +54,8 @@ const KILL_TEXT_COLOR := Color(1.0, 0.36, 0.36)
 # button fill colors (TREAT/CLEAR/WAIT) now live in Palette.gd, shared with
 # every other screen's buttons rather than being local to this file
 
+const GearIconScript := preload("res://scripts/ui/gear_icon.gd")
+const SettingsPanelScript := preload("res://scripts/ui/settings_panel.gd")
 const SkillTreeScript := preload("res://scripts/ui/skill_tree.gd")  # lets us read SKILLS without instantiating the tree
 
 signal game_ended_signal(ending: String, people_lost: int, zombies_killed: int, zombies_cured: int, total_population: int)
@@ -112,6 +118,9 @@ var action_panel: PanelContainer
 var skill_button_panel: PanelContainer
 var skill_preview_icons: Dictionary = {}  # icon_path -> {"node": TextureRect, "keys": Array[String]}
 var tutorial_ref: CanvasLayer
+var settings_ref: CanvasLayer
+var settings_button: Button
+var settings_button_panel: PanelContainer
 var action_history: Array[String] = []
 var action_targets: Array[Dictionary] = []
 var upgrade_purchases: Array[Dictionary] = []
@@ -169,6 +178,9 @@ func _ready() -> void:
 	refresh_status()
 	maybe_start_tutorial.call_deferred()
 	fade_in()
+	map_music.bus = AudioSettings.MUSIC_BUS
+	treat_sound.bus = AudioSettings.SFX_BUS
+	clear_sound.bus = AudioSettings.SFX_BUS
 	map_music.finished.connect(map_music.play)
 	map_music.play()
 
@@ -977,6 +989,11 @@ func _on_wait_pressed() -> void:
 	set_last_action("Waited")
 	await run_wait_cycle()
 
+func _on_tutorial_pressed() -> void:
+	if game_ended or is_transitioning:
+		return
+	start_tutorial()
+
 func set_last_action(text: String) -> void:
 	if action_label != null:
 		action_label.text = text
@@ -1087,6 +1104,7 @@ func create_day_controls() -> void:
 	hud_font = _make_ui_font()
 	_build_status_panel()
 	_build_right_hud()
+	_build_settings_button()
 	selection_highlight = Line2D.new()
 	selection_highlight.width = 4.0
 	selection_highlight.default_color = Palette.HIGHLIGHT_BONE
@@ -1263,11 +1281,41 @@ func _build_right_hud() -> void:
 	vbox.offset_top = 24.0
 	vbox.offset_right = -HUD_MARGIN
 	vbox.custom_minimum_size = Vector2(RIGHT_HUD_WIDTH, 0)
-	vbox.add_theme_constant_override("separation", RIGHT_HUD_BLOCK_GAP)
+	vbox.add_theme_constant_override("separation", 0)
 	$UI.add_child(vbox)
 
 	vbox.add_child(_build_skill_panel_block())
+	var skill_tutorial_spacer := Control.new()
+	skill_tutorial_spacer.custom_minimum_size = Vector2(0, 10)
+	vbox.add_child(skill_tutorial_spacer)
+	vbox.add_child(_build_tutorial_panel_block())
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 200)
+	vbox.add_child(spacer)
 	vbox.add_child(_build_action_panel_block())
+
+func _build_tutorial_panel_block() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_FILL
+	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
+	_add_panel_grain(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	panel.add_child(vbox)
+
+	var tutorial_btn := Button.new()
+	tutorial_btn.text = "Tutorial"
+	tutorial_btn.custom_minimum_size = Vector2(200, 44)
+	tutorial_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if hud_font != null:
+		tutorial_btn.add_theme_font_override("font", hud_font)
+	tutorial_btn.add_theme_font_size_override("font_size", 22)
+	_style_hud_button(tutorial_btn, Palette.NEUTRAL_BUTTON_FILL)
+	tutorial_btn.pressed.connect(_on_tutorial_pressed)
+	vbox.add_child(tutorial_btn)
+
+	return panel
 
 func _build_skill_panel_block() -> PanelContainer:
 	# one panel holding both the button and the read-only unlock-progress icons
@@ -1369,6 +1417,48 @@ func _update_level_pip(pip: Panel, owned: bool) -> void:
 		style.set_border_width_all(1)
 		style.border_color = Palette.ICON_TINT_LOCKED
 	pip.add_theme_stylebox_override("panel", style)
+
+func _build_settings_button() -> void:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 1.0
+	panel.anchor_right = 1.0
+	panel.anchor_top = 1.0
+	panel.anchor_bottom = 1.0
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.offset_right = -HUD_MARGIN
+	panel.offset_bottom = -HUD_MARGIN
+	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
+	$UI.add_child(panel)
+	settings_button_panel = panel
+	_add_panel_grain(panel)
+
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(SETTINGS_BUTTON_SIZE, SETTINGS_BUTTON_SIZE)
+	button.tooltip_text = "Settings"
+	_style_hud_button(button, Palette.NEUTRAL_BUTTON_FILL)
+	button.pressed.connect(_on_settings_pressed)
+	panel.add_child(button)
+	settings_button = button
+
+	var icon := GearIconScript.new() as Control
+	icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	icon.offset_left = SETTINGS_ICON_INSET
+	icon.offset_top = SETTINGS_ICON_INSET
+	icon.offset_right = -SETTINGS_ICON_INSET
+	icon.offset_bottom = -SETTINGS_ICON_INSET
+	button.add_child(icon)
+
+func _on_settings_pressed() -> void:
+	if settings_ref != null and is_instance_valid(settings_ref):
+		return
+	var settings: CanvasLayer = SettingsPanelScript.new()
+	settings_ref = settings
+	settings.closed.connect(_on_settings_closed)
+	add_child(settings)
+
+func _on_settings_closed() -> void:
+	settings_ref = null
 
 func _build_action_panel_block() -> PanelContainer:
 	# sizing/positioning is owned by the parent right-hud VBoxContainer, not here
@@ -1563,7 +1653,7 @@ func create_hover_popup() -> void:
 func _process(_delta: float) -> void:
 	if hover_popup == null:
 		return
-	if tooltip_suppressed:
+	if tooltip_suppressed or (settings_ref != null and is_instance_valid(settings_ref)):
 		_fade_hover_popup(false)
 		return
 	var cell := grid.local_to_map(grid.to_local(get_global_mouse_position()))
