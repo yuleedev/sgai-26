@@ -705,7 +705,11 @@ func grow_infection() -> void:
 			ring_treated_cells.erase(cell)
 		var growth: int = max(1, int(floor(infected * convert_rate)))
 		var converted: int = min(growth, data["healthy"])
-		var died: int = min(int(floor(infected * INFECT_DEATH_RATE)), infected)
+		var death_expected := infected * INFECT_DEATH_RATE
+		var died: int = int(floor(death_expected))
+		if randf() < death_expected - died:
+			died += 1
+		died = min(died, infected)
 		data["healthy"] -= converted
 		data["infected"] += converted - died
 		data["dead"] += died

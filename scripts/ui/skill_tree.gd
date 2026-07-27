@@ -59,7 +59,7 @@ const SKILLS := [
 		{
 			key = "reinforced_clear",
 			name = "Reinforced Clear",
-			desc = "Unlock paid Clear (55% kill for $8K)",
+			desc = "Unlock paid Clear: 55% kill, 85% lockdown ($8K)",
 			cost = 50,
 			icon_path = "res://assets/icons/upgrade_clear.svg",
 			pos = Vector2(526, 135),
