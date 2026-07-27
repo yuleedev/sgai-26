@@ -599,9 +599,6 @@ func check_ending() -> void:
 		return
 
 	if day >= vaccine_unlock_day:
-		# captured before the vaccine conversion below zeroes out infected/healthy,
-		# so this matches exactly what compute_people_lost() would have reported
-		# at this instant -- same source as the live HUD line and the LOSS branch above
 		var people_lost := compute_people_lost()
 		for cell in cell_data:
 			if cell == BASE_CELL:
