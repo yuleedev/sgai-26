@@ -139,9 +139,12 @@ var risk_highlight_tweens: Array[Tween] = []
 
 const REINFORCED_CLEAR_RATE := 0.55
 var clear_plus_button: Button
+var clear_fee: int = 3  # base Clear is no longer free -- stops infinite no-cost camping on one cell
 var contained_cells: Dictionary[Vector2i, float] = {}  # cell -> spread multiplier, set by Clear/Clear+
 var treated_cells: Dictionary[Vector2i, bool] = {}  # Treat's own cell, 1-day growth cut
 var ring_treated_cells: Dictionary[Vector2i, bool] = {}  # Treat's neighbors, smaller 1-day growth cut
+var last_cleared_cell: Vector2i = Vector2i(-999, -999)
+var clear_streak: int = 0  # consecutive Clear/Clear+ uses on the same cell -- the seal weakens each time
 
 @export_file("*.tscn")
 var end_screen_path := "res://scenes/end_screen.tscn"
@@ -923,21 +926,33 @@ func _on_clear_pressed() -> void:
 	if not has_valid_selection():
 		set_last_action("Select a neighborhood first")
 		return
+	if money < clear_fee:
+		set_last_action("Not enough funding for Clear")
+		return
 	is_transitioning = true
 	var doses_before := doses
 	var funding_before := money
 	var population_before := living_population()
+	money -= clear_fee
+	clear_spending += clear_fee
+	money_changed.emit(money)
+	_update_skill_tree()
 	var data := cell_data[selected_cell]
 	var killed: int = compute_action_amount(data["infected"], clear_kill_rate)
 	_record_targeted_action("CLEAR", selected_cell, int(data["infected"]))
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
-	contained_cells[selected_cell] = 0.5
+	if selected_cell == last_cleared_cell:
+		clear_streak += 1
+	else:
+		last_cleared_cell = selected_cell
+		clear_streak = 0
+	contained_cells[selected_cell] = minf(1.0, 0.5 + 0.15 * clear_streak)
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	clear_sound.play()
-	set_last_action("Cleared (%d, %d): -%d infected, +%d dead" % [selected_cell.x, selected_cell.y, killed, killed])
+	set_last_action("Cleared (%d, %d): -%d infected, +%d dead ($%dK)" % [selected_cell.x, selected_cell.y, killed, killed, clear_fee])
 	await run_day_cycle(selected_cell, "res://assets/icons/upgrade_clear.svg", CLEAR_COLOR, "+%d killed" % killed, KILL_TEXT_COLOR, true, doses_before, funding_before, population_before)
 
 func _on_clear_plus_pressed() -> void:
@@ -966,7 +981,12 @@ func _on_clear_plus_pressed() -> void:
 	data["infected"] -= killed
 	data["dead"] += killed
 	total_zombies_killed += killed
-	contained_cells[selected_cell] = 0.15
+	if selected_cell == last_cleared_cell:
+		clear_streak += 1
+	else:
+		last_cleared_cell = selected_cell
+		clear_streak = 0
+	contained_cells[selected_cell] = minf(1.0, 0.15 + 0.15 * clear_streak)
 	last_action_type = "CLEAR"
 	last_action_cell = selected_cell
 	clear_sound.play()
@@ -1479,7 +1499,7 @@ func _build_action_panel_block() -> PanelContainer:
 	vbox.add_child(header)
 
 	treat_button = add_action_button(vbox, "Treat", _on_treat_pressed, Palette.TREAT_BUTTON_FILL)
-	clear_button = add_action_button(vbox, "Clear", _on_clear_pressed, Palette.CLEAR_BUTTON_FILL)
+	clear_button = add_action_button(vbox, "Clear ($%dK)" % clear_fee, _on_clear_pressed, Palette.CLEAR_BUTTON_FILL)
 	clear_plus_button = add_action_button(vbox, "Clear+", _on_clear_plus_pressed, CLEAR_PLUS_ACCENT)
 	clear_plus_button.visible = has_skill("reinforced_clear")
 	add_action_button(vbox, "Wait", _on_wait_pressed, Palette.NEUTRAL_BUTTON_FILL)
@@ -1720,7 +1740,7 @@ func start_tutorial() -> void:
 		},
 		{
 			"title": "Take action",
-			"body": "Select a tile first, then choose a move. Every action advances the day. TREAT spends a dose to cure a share of the infected, CLEAR kills a share fast but the dead cannot be brought back, and WAIT passes the day while the virus keeps spreading. The infection is fatal on its own: every day a neighborhood stays infected, about 5% of its infected die. Leaving a tile alone still costs lives.",
+			"body": "Select a tile first, then choose a move. Every action advances the day. TREAT spends a dose to cure a share of the infected and gives nearby tiles a small protective boost too, CLEAR kills a share fast and locks down that tile's spread to its neighbors, and WAIT passes the day while the virus keeps spreading. Camping the same tile with CLEAR over and over gets weaker each time -- it can't hold forever. The infection is fatal on its own: every day a neighborhood stays infected, about 5% of its infected die. Leaving a tile alone still costs lives.",
 			"target": action_panel,
 		},
 		{
