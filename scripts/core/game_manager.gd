@@ -1571,10 +1571,10 @@ func update_selection_panel() -> void:
 	var treat_available := doses > 0 and infected > 0
 	var clear_available := infected > 0
 
-	treat_preview_label.text = "Treat → %d cured" % cure_amount
+	treat_preview_label.text = "Treat: %d cured" % cure_amount
 	treat_preview_label.add_theme_color_override("font_color", Color(0.49, 0.84, 0.34) if treat_available else Color(0.5, 0.5, 0.54))
 
-	clear_preview_label.text = "Clear → %d killed" % kill_amount
+	clear_preview_label.text = "Clear: %d killed" % kill_amount
 	clear_preview_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.45) if clear_available else Color(0.5, 0.5, 0.54))
 
 func create_origin_marker() -> void:
