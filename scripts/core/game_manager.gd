@@ -1437,13 +1437,13 @@ func _update_level_pip(pip: Panel, owned: bool) -> void:
 
 func _build_settings_button() -> void:
 	var panel := PanelContainer.new()
-	panel.anchor_left = 1.0
-	panel.anchor_right = 1.0
+	panel.anchor_left = 0.0
+	panel.anchor_right = 0.0
 	panel.anchor_top = 1.0
 	panel.anchor_bottom = 1.0
-	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_horizontal = Control.GROW_DIRECTION_END
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	panel.offset_right = -HUD_MARGIN
+	panel.offset_left = HUD_MARGIN
 	panel.offset_bottom = -HUD_MARGIN
 	panel.add_theme_stylebox_override("panel", _make_hud_panel_style(HudStyle.AccentEdge.BORDERED))
 	$UI.add_child(panel)
