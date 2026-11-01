@@ -5,7 +5,7 @@ SGAI-26: Welcome to the Apocalypse is a strategy game built in Godot where playe
 ## Getting Started/Installation
 
 Mac and Windows downloads are available here:
-https://yuleedev.itch.io/team-viral
+https://yuleedev.itch.io/sgai-26
 
 After downloading:
 
