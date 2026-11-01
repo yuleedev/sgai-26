@@ -1,6 +1,6 @@
-# Team Viral
+# SGAI-26
 
-Team Viral is a strategy game built in Godot where players manage a city of 25 neighborhoods during a zombie outbreak. Each day you choose to treat, clear, or wait, balancing limited doses and funding while racing to protect as much of the population as possible before a vaccine arrives. The game was made as a project for the MIT Beaverworks Summer Institute's Serious Games with AI course, created by Aadvik Kesarwani, Annabelle Pan, Aydin Heugh, Hannah Ying, and Yulee Oh.
+SGAI-26: Welcome to the Apocalypse is a strategy game built in Godot where players manage a city of 25 neighborhoods during a zombie outbreak. Each day you choose to treat, clear, or wait, balancing limited doses and funding while racing to protect as much of the population as possible before a vaccine arrives. The game was made as a project for the MIT Beaverworks Summer Institute's Serious Games with AI course, created by Aadvik Kesarwani, Annabelle Pan, Aydin Heugh, Hannah Ying, and Yulee Oh.
 
 ## Getting Started/Installation
 
